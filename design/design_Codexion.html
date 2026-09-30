@@ -31,6 +31,8 @@ html{scroll-behavior:smooth;scroll-padding-top:16px}
 body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
   background:var(--bg);color:var(--fg);line-height:1.9;font-size:15.5px}
 .layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1100px;margin:0 auto;gap:0 40px;padding:0 24px}
+.layout.toc-off{grid-template-columns:minmax(0,1fr);gap:0}
+.layout.toc-off nav.toc{display:none}
 main{padding:28px 0 90px;min-width:0}
 /* ---- 目次 ---- */
 nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 8px 28px 0;font-size:13px}
@@ -43,6 +45,7 @@ nav.toc a.active{color:var(--accent);border-left-color:var(--accent);font-weight
 @media (max-width:900px){
   .layout{display:block}
   nav.toc{position:static;height:auto;border-bottom:1px solid var(--border);margin-bottom:8px}
+  .layout.toc-off nav.toc{display:none}
 }
 /* ---- ヘッダ・案内 ---- */
 .doc-head h1{font-size:25px;margin:0 0 4px}
@@ -104,11 +107,14 @@ figure.diagram figcaption{font-size:12px;color:var(--muted);margin-top:10px;text
 .d-step.plain{border-color:var(--border);background:var(--code-bg)}
 .d-arr{color:var(--muted);align-self:center;font-size:18px;flex:none}
 footer{margin-top:60px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted)}
-#theme-toggle{position:fixed;top:14px;right:16px;z-index:70;border:1px solid var(--border);
+#theme-toggle,#toc-toggle{position:fixed;top:14px;right:16px;z-index:70;border:1px solid var(--border);
   background:var(--panel);color:var(--fg);border-radius:50%;width:38px;height:38px;
   cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+#theme-toggle:hover,#toc-toggle:hover{border-color:var(--accent);color:var(--accent)}
+#toc-toggle{right:62px;font-size:15px}
+#toc-toggle[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 @media print{
-  nav.toc,#theme-toggle,.tip,.dod-note{display:none!important}
+  nav.toc,#theme-toggle,#toc-toggle,.tip,.dod-note{display:none!important}
   .layout{display:block;max-width:none;padding:0}
   body{background:#fff;color:#000;font-size:10.5pt}
   main{padding:0}
@@ -120,9 +126,10 @@ footer{margin-top:60px;padding-top:14px;border-top:1px solid var(--border);font-
 </style>
 </head>
 <body>
+<button id="toc-toggle" aria-controls="toc" aria-expanded="true" aria-label="目次の表示切替">☰</button>
 <button id="theme-toggle" title="ダーク/ライト切替" aria-label="テーマ切替">◐</button>
 <div class="layout">
-<nav class="toc" aria-label="目次">
+<nav class="toc" id="toc" aria-label="目次">
   <div class="toc-title">目次</div>
   <ol>
     <li><a href="#sec-1">1. ひとことで言うと</a></li>
@@ -318,6 +325,26 @@ footer{margin-top:60px;padding-top:14px;border-top:1px solid var(--border);font-
     var next=(cur==='dark')?'light':'dark';
     document.documentElement.dataset.theme=next;
     localStorage.setItem(KEY+':theme',next);
+  });
+
+  /* 目次サイドバーのON/OFF（ワンタッチ + Tキー） */
+  var layout=document.querySelector('.layout');
+  var tocBtn=document.getElementById('toc-toggle');
+  var tocOn=localStorage.getItem(KEY+':toc')!=='0';
+  function setToc(on){
+    tocOn=on;
+    layout.classList.toggle('toc-off',!on);
+    tocBtn.setAttribute('aria-expanded',on?'true':'false');
+    tocBtn.title=(on?'目次を隠す':'目次を表示')+'（T キー）';
+    localStorage.setItem(KEY+':toc',on?'1':'0');
+  }
+  setToc(tocOn);
+  tocBtn.addEventListener('click',function(){setToc(!tocOn);});
+  document.addEventListener('keydown',function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey){return;}
+    var t=e.target;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)){return;}
+    if(e.key==='t'||e.key==='T'){setToc(!tocOn);}
   });
 
   /* ゴールのチェックリスト（進捗保存） */

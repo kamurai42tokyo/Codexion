@@ -1,0 +1,9 @@
+[出力]
+5種類のメッセージを1行ずつ出力する。
+「タイムスタンプ コーダー番号 メッセージ」の形で1行ずつ書く。
+
+・timestamp_in_ms X has taken a dongle  ：コーダーXが、ドングルを1本取ったときの行
+・timestamp_in_ms X is compiling        ：コーダーXが、コンパイルを始めたときの行
+・timestamp_in_ms X is debugging        ：コーダーXが、デバッグを始めたときの行
+・timestamp_in_ms X is refactoring      ：コーダーXが、リファクタリングを始めたときの行
+・timestamp_in_ms X burned out          ：コーダーXが、燃え尽きた（burnout）ときの行

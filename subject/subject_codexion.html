@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codexion — 原文と和訳</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-both">
+<header class="site">
+  <div class="inner">
+    <a class="brand" href="index.html">42 Milestone 3 課題まとめ</a>
+    <nav>
+      <a href="index.html">概要</a>
+      <a href="call-me-maybe.html">Call Me Maybe</a>
+      <a href="codexion.html" class="here">Codexion</a>
+      <a href="fly-in.html">Fly-in</a>
+      <a href="comparison.html">難易度比較</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <h1>Codexion</h1>
+  <p class="tagline">Master the race for resources before the deadline masters you ／ 締め切りに支配される前に、リソース争奪戦を制せよ</p>
+  <div class="badges">
+    <span class="badge acc" style="background:var(--cdx)">C / pthread</span>
+    <span class="badge">Norm <b>準拠必須</b></span>
+    <span class="badge">Version <b>1.5</b></span>
+    <span class="badge">難易度 <b>8 / 10</b></span>
+    <span class="badge">想定 <b>60–100時間</b></span>
+  </div>
+
+  <div class="summary" style="--acc:var(--cdx)">
+    <h2>実装要約 — この課題で作るもの</h2>
+    <p class="goal-line">「食事する哲学者」の拡張版 — N人のコーダーを誰も燃え尽きさせずに回すシミュレータを作る</p>
+    <p class="goal-sub">N人のコーダー（=スレッド）が円卓に座り、左右2本のUSBドングル（=フォーク相当の共有資源）を取って「コンパイル→デバッグ→リファクタリング」を繰り返す。全員が規定回数のコンパイルを終えるまで、誰一人 <b>burnout</b>（燃え尽き）させないこと。独自要素は cooldown・FIFO/EDF 調停・10ms精度の監視。</p>
+    <div class="flow" aria-label="処理フロー">
+      <span class="fbox">引数8つ<br><small>パースと検証（負数・非整数・不正スケジューラは拒否）</small></span>
+      <span class="farr">→</span>
+      <span class="fbox">コーダーN人=スレッド ⇄ ドングルN本=mutex<br><small>cooldown / FIFO・EDF調停（自作ヒープ）/ monitorスレッドが10msで監視</small></span>
+      <span class="farr">→</span>
+      <span class="fbox">指定形式のログ<br><small>mutex で直列化して出力</small></span>
+    </div>
+    <h3>実装が必要な要素</h3>
+    <div class="elems">
+      <div class="elem"><span class="lbl">引数処理</span><span class="desc">8つの必須引数（コーダー数・各フェーズの時間・必要コンパイル回数・cooldown・スケジューラ種別）のパースと検証。負数・非整数・<code>fifo</code>/<code>edf</code> 以外は拒否。</span></div>
+      <div class="elem"><span class="lbl">スレッド構成</span><span class="desc">コーダー1人につき1スレッド（<code>pthread_create</code>）。ドングルごとに mutex（+必要なら条件変数）で状態を保護。</span></div>
+      <div class="elem"><span class="lbl">cooldown</span><span class="desc">ドングルは解放後、<code>dongle_cooldown</code> ミリ秒が経過するまで再取得不可。</span></div>
+      <div class="elem"><span class="lbl">スケジューラ</span><span class="desc">同じドングルの要求が競合したら <code>fifo</code>（到着順）または <code>edf</code>（燃え尽き期限が最も早い人を優先）で調停。優先度キュー（ヒープ）の自作が必須。本課題の独自要素。</span></div>
+      <div class="elem"><span class="lbl">monitor</span><span class="desc">専用スレッドで burnout を検出し、実際の燃え尽き時刻から10ms以内にログを出して停止。</span></div>
+      <div class="elem"><span class="lbl">ログ</span><span class="desc">「<code>timestamp X is compiling</code>」等の指定フォーマット厳守。mutex で出力を直列化し、行の混線を防ぐ。</span></div>
+      <div class="elem"><span class="lbl">終了条件</span><span class="desc">誰かが燃え尽きる、または全員が <code>number_of_compiles_required</code> 回以上コンパイルしたら終了。</span></div>
+    </div>
+    <h3>制約と目標</h3>
+    <div class="krow"><span class="klbl">制約</span><span class="chips">
+      <span class="chip no">グローバル変数</span><span class="chip no">メモリリーク・データ競合</span><span class="chip no">libft</span><span class="chip no">標準の優先度キュー</span><span class="chip">Norm 準拠（エラー1つで<b>0点</b>）</span><span class="chip"><code>-Wall -Wextra -Werror -pthread</code></span><span class="chip">許可関数は pthread系・時間系・基本関数のみ</span>
+    </span></div>
+    <div class="krow"><span class="klbl">性能要件</span><span class="chips">
+      <span class="chip">burnout 通知 <b>10ms以内</b></span><span class="chip">edf で starvation <b>ゼロ</b>（liveness保証）</span>
+    </span></div>
+    <div class="krow"><span class="klbl">提出物</span><span class="chips">
+      <span class="chip">Makefile（NAME, all, clean, fclean, re）</span><span class="chip"><code>*.c</code> / <code>*.h</code>（任意フォルダ）</span><span class="chip">README.md（英語・並行処理の解説必須）</span>
+    </span></div>
+  </div>
+
+  <div class="langbar">
+    <span class="lbl">表示:</span>
+    <button data-m="both" class="on">対訳</button>
+    <button data-m="en">English</button>
+    <button data-m="ja">日本語</button>
+  </div>
+
+  <!-- Chapter I -->
+  <details class="chapter">
+    <summary><span class="chno">Chapter I</span><span class="en">Introduction</span><span class="ja">導入</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en">
+          <p>Computer programming (often simply called "coding") is the process of designing and building executable software to accomplish specific computing tasks. It involves analysis, generating algorithms, profiling algorithms’ accuracy and resource consumption, and implementing these algorithms in a chosen programming language. The earliest computers were programmed directly in machine code, sequences of binary instructions understood by the hardware. Over time, higher-level languages were developed, allowing coders to express ideas more abstractly.</p>
+          <p>Coding culture extends beyond the purely technical. It blends problem-solving, creativity, and collaboration in shared environments ranging from open-source communities to co-working spaces and hackathons. Within these hubs, coders not only write code but also debug, refactor, and share tools. Some resources in such environments are plentiful (e.g., coffee), while others — like specialized hardware dongles or licensed development environments — are limited and must be shared carefully to avoid bottlenecks.</p>
+          <p>Just as ancient philosophers debated truth and existence, modern coders debate programming paradigms, design patterns, and ethical software practices. Is it better to optimize for speed or maintainability? Should one refactor now or after the product proves itself? How can a team ensure fair access to shared development resources without stalling progress?</p>
+          <p>Historically, programming was often a solitary pursuit, but the evolution of collaborative tools — version control systems, real-time editors, and distributed issue trackers — has made coding an increasingly social and cooperative process. Alongside this, concurrency and synchronization have become vital skills: knowing how to let many developers or processes work without stepping on each other’s toes is as important as writing the code itself.</p>
+          <p>In the modern era, with teams spread across time zones and projects using time-limited or scarce hardware, the challenge is not only to write correct code, but also to design fair and efficient protocols for sharing resources. This simulation models such a scenario: coders working in a shared space, requiring two rare USB dongles to compile their quantum code. They must coordinate, avoid deadlocks, and prevent burnout — because in the world of collaborative coding, as in life, access and timing are everything.</p>
+        </div>
+        <div class="ja">
+          <p>コンピュータプログラミング（しばしば単に「コーディング」と呼ばれます）は、特定の計算タスクを達成するために実行可能なソフトウェアを設計・構築するプロセスです。そこには分析、アルゴリズムの考案、アルゴリズムの正確さとリソース消費のプロファイリング、そして選んだプログラミング言語でのアルゴリズムの実装が含まれます。最初期のコンピュータは、ハードウェアが理解するバイナリ命令の並びである機械語で直接プログラムされていました。時が経つにつれ高水準言語が開発され、コーダーはアイデアをより抽象的に表現できるようになりました。</p>
+          <p>コーディング文化は純粋な技術の枠を超えて広がっています。オープンソースコミュニティからコワーキングスペース、ハッカソンまで、共有された環境の中で問題解決・創造性・協働が混ざり合います。こうしたハブで、コーダーはコードを書くだけでなく、デバッグし、リファクタリングし、ツールを共有します。そうした環境のリソースには潤沢なもの（例: コーヒー）もあれば、専用ハードウェアのドングルやライセンス制の開発環境のように数が限られていて、ボトルネックを避けるため慎重に共有しなければならないものもあります。</p>
+          <p>古代の哲学者が真理と存在を議論したように、現代のコーダーはプログラミングパラダイム、デザインパターン、倫理的なソフトウェア実践を議論します。速度と保守性のどちらに最適化すべきか？　今リファクタリングすべきか、それともプロダクトの価値が実証されてからか？　チームは、進捗を止めることなく共有開発リソースへの公平なアクセスをどう保証できるか？</p>
+          <p>歴史的にプログラミングは孤独な営みであることが多かったのですが、バージョン管理システム、リアルタイムエディタ、分散イシュートラッカーといった協働ツールの進化により、コーディングはますます社会的で協力的なプロセスになりました。それと並行して、並行性（concurrency）と同期（synchronization）は不可欠なスキルになりました。多くの開発者やプロセスが互いの足を踏まずに作業できるようにする方法を知ることは、コードを書くこと自体と同じくらい重要です。</p>
+          <p>チームがタイムゾーンをまたいで分散し、プロジェクトが時間制限付き・希少なハードウェアを使う現代では、課題は正しいコードを書くことだけでなく、リソースを共有するための公平で効率的なプロトコルを設計することでもあります。このシミュレーションはまさにそうしたシナリオをモデル化します: 共有スペースで働くコーダーたちは、量子コードをコンパイルするために2本の希少なUSBドングルを必要とします。彼らは協調し、デッドロックを避け、燃え尽き（burnout）を防がなければなりません。協働コーディングの世界では、人生と同じく、アクセスとタイミングがすべてだからです。</p>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter II -->
+  <details class="chapter">
+    <summary><span class="chno">Chapter II</span><span class="en">AI Instructions</span><span class="ja">AIに関する指針（3課題共通）</span></summary>
+    <div class="body">
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p>This chapter is identical across all three Milestone 3 subjects.</p></div>
+          <div class="ja"><p>この章は Milestone 3 の3課題すべてで同一の内容です。</p></div>
+        </div>
+      </div>
+      <h3><span class="en">Context</span><span class="ja">背景</span></h3>
+      <div class="bi">
+        <div class="en"><p>During your learning journey, AI can assist with many different tasks. Take the time to explore the various capabilities of AI tools and how they can support your work. However, always approach them with caution and critically assess the results. Whether it’s code, documentation, ideas, or technical explanations, you can never be completely sure that your question was well-formed or that the generated content is accurate. Your peers are a valuable resource to help you avoid mistakes and blind spots.</p></div>
+        <div class="ja"><p>学習の過程で、AIは多様なタスクを支援してくれます。時間をかけてAIツールの様々な能力と、それが自分の作業をどう支えられるかを探ってみてください。ただし、常に慎重に扱い、結果を批判的に評価すること。コードでもドキュメントでもアイデアでも技術的説明でも、自分の質問が適切だったか、生成された内容が正確かを完全に確信することはできません。仲間（ピア）は、間違いや盲点を避けるための貴重なリソースです。</p></div>
+      </div>
+      <h3><span class="en">Main message</span><span class="ja">主なメッセージ</span></h3>
+      <div class="bi">
+        <div class="en"><ul>
+          <li>Use AI to reduce repetitive or tedious tasks.</li>
+          <li>Develop prompting skills — both coding and non-coding — that will benefit your future career.</li>
+          <li>Learn how AI systems work to better anticipate and avoid common risks, biases, and ethical issues.</li>
+          <li>Continue building both technical and power skills by working with your peers.</li>
+          <li>Only use AI-generated content that you fully understand and can take responsibility for.</li>
+        </ul></div>
+        <div class="ja"><ul>
+          <li>反復的で退屈な作業を減らすためにAIを使うこと。</li>
+          <li>コーディング・非コーディング両面で、将来のキャリアに役立つプロンプト力を磨くこと。</li>
+          <li>AIシステムの仕組みを学び、よくあるリスク・バイアス・倫理的問題を予見し回避できるようになること。</li>
+          <li>仲間と協働しながら、技術スキルと対人スキルの両方を伸ばし続けること。</li>
+          <li>完全に理解し、自分で責任を持てるAI生成物だけを使うこと。</li>
+        </ul></div>
+      </div>
+      <h3><span class="en">Learner rules</span><span class="ja">学習者のルール</span></h3>
+      <div class="bi">
+        <div class="en"><ul>
+          <li>You should take the time to explore AI tools and understand how they work, so you can use them ethically and reduce potential biases.</li>
+          <li>You should reflect on your problem before prompting — this helps you write clearer, more detailed, and more relevant prompts using accurate vocabulary.</li>
+          <li>You should develop the habit of systematically checking, reviewing, questioning, and testing anything generated by AI.</li>
+          <li>You should always seek peer review — don’t rely solely on your own validation.</li>
+        </ul></div>
+        <div class="ja"><ul>
+          <li>AIツールを倫理的に使い、潜在的なバイアスを減らせるよう、時間をかけてその仕組みを理解すべきです。</li>
+          <li>プロンプトを書く前に問題についてよく考えるべきです。そうすることで、正確な語彙を使った、より明確で詳細かつ的確なプロンプトが書けます。</li>
+          <li>AIが生成したものを体系的に確認・レビュー・疑問視・テストする習慣を身につけるべきです。</li>
+          <li>常にピアレビューを求めるべきです。自分だけの検証に頼らないこと。</li>
+        </ul></div>
+      </div>
+      <h3><span class="en">Phase outcomes</span><span class="ja">このフェーズの成果</span></h3>
+      <div class="bi">
+        <div class="en"><ul>
+          <li>Develop both general-purpose and domain-specific prompting skills.</li>
+          <li>Boost your productivity with effective use of AI tools.</li>
+          <li>Continue strengthening computational thinking, problem-solving, adaptability, and collaboration.</li>
+        </ul></div>
+        <div class="ja"><ul>
+          <li>汎用・分野特化の両方のプロンプトスキルを磨く。</li>
+          <li>AIツールの効果的な活用で生産性を高める。</li>
+          <li>計算論的思考・問題解決力・適応力・協働力をさらに強化する。</li>
+        </ul></div>
+      </div>
+      <h3><span class="en">Comments and examples</span><span class="ja">コメントと例</span></h3>
+      <div class="bi">
+        <div class="en"><ul>
+          <li>You’ll regularly encounter situations — exams, evaluations, and more — where you must demonstrate real understanding. Be prepared, keep building both your technical and interpersonal skills.</li>
+          <li>Explaining your reasoning and debating with peers often reveals gaps in your understanding. Make peer learning a priority.</li>
+          <li>AI tools often lack your specific context and tend to provide generic responses. Your peers, who share your environment, can offer more relevant and accurate insights.</li>
+          <li>Where AI tends to generate the most likely answer, your peers can provide alternative perspectives and valuable nuance. Rely on them as a quality checkpoint.</li>
+        </ul></div>
+        <div class="ja"><ul>
+          <li>試験や評価など、本当の理解を示さなければならない場面には定期的に遭遇します。技術面と対人面の両方のスキルを磨いて備えること。</li>
+          <li>自分の推論を説明し仲間と議論すると、理解の穴が見つかることがよくあります。ピアラーニングを優先すること。</li>
+          <li>AIツールはあなた固有の状況を知らないため、一般的な回答をしがちです。同じ環境を共有する仲間なら、より的確で正確な知見を提供できます。</li>
+          <li>AIが「最もありそうな答え」を生成しがちなのに対し、仲間は別の視点や貴重なニュアンスを提供してくれます。品質のチェックポイントとして仲間を頼ること。</li>
+        </ul></div>
+      </div>
+      <div class="practice good"><span class="tag">✓ Good practice</span>
+        <div class="bi">
+          <div class="en"><p>I ask AI: “How do I test a sorting function?” It gives me a few ideas. I try them out and review the results with a peer. We refine the approach together.</p></div>
+          <div class="ja"><p>AIに「ソート関数はどうテストすればいい？」と尋ねる。いくつかアイデアをもらい、試してみて、結果を仲間とレビューする。一緒にアプローチを洗練させる。</p></div>
+        </div>
+      </div>
+      <div class="practice bad"><span class="tag">✗ Bad practice</span>
+        <div class="bi">
+          <div class="en"><p>I ask AI to write a whole function, copy-paste it into my project. During peer-evaluation, I can’t explain what it does or why. I lose credibility — and I fail my project.</p></div>
+          <div class="ja"><p>AIに関数を丸ごと書かせ、プロジェクトにコピペする。ピア評価で、それが何をしているのか・なぜそうなのか説明できない。信頼を失い、プロジェクトも落とす。</p></div>
+        </div>
+      </div>
+      <div class="practice good"><span class="tag">✓ Good practice</span>
+        <div class="bi">
+          <div class="en"><p>I use AI to help design a parser. Then I walk through the logic with a peer. We catch two bugs and rewrite it together — better, cleaner, and fully understood.</p></div>
+          <div class="ja"><p>パーサーの設計にAIの助けを借りる。その後、ロジックを仲間と一緒に追う。2つのバグを見つけ、一緒に書き直す。より良く、よりクリーンに、完全に理解した状態で。</p></div>
+        </div>
+      </div>
+      <div class="practice bad"><span class="tag">✗ Bad practice</span>
+        <div class="bi">
+          <div class="en"><p>I let Copilot generate my code for a key part of my project. It compiles, but I can’t explain how it handles pipes. During the evaluation, I fail to justify and I fail my project.</p></div>
+          <div class="ja"><p>プロジェクトの重要な部分のコードをCopilotに生成させる。コンパイルは通るが、パイプの扱いを説明できない。評価で正当化できず、プロジェクトを落とす。</p></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter III -->
+  <details class="chapter">
+    <summary><span class="chno">Chapter III</span><span class="en">Common Instructions</span><span class="ja">共通指示（C課題）</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en"><ul>
+          <li>Your project must be written in C.</li>
+          <li>Your project must be written in accordance with the Norm. If you have bonus files/functions, they are included in the norm check, and you will receive a 0 if there is a norm error.</li>
+          <li>Your functions should not quit unexpectedly (segmentation fault, bus error, double free, etc.) except for undefined behavior. If this occurs, your project will be considered non-functional and will receive a 0 during the evaluation.</li>
+          <li>All heap-allocated memory must be properly freed when necessary. Memory leaks will not be tolerated.</li>
+          <li>If the subject requires it, you must submit a Makefile that compiles your source files to the required output with the flags -Wall, -Wextra, and -Werror, using cc. Additionally, your Makefile must not perform unnecessary relinking.</li>
+          <li>Your Makefile must contain at least the rules $(NAME), all, clean, fclean and re.</li>
+          <li>To submit bonuses for your project, you must include a bonus rule in your Makefile, which will add all the various headers, libraries, or functions that are not allowed in the main part of the project. Bonuses must be placed in _bonus.{c/h} files, unless the subject specifies otherwise. The evaluation of mandatory and bonus parts is conducted separately.</li>
+          <li>If your project allows you to use your libft, you must copy its sources and its associated Makefile into a libft folder. Your project’s Makefile must compile the library by using its Makefile, then compile the project.</li>
+          <li>We encourage you to create test programs for your project, even though this work <b>does not need to be submitted and will not be graded</b>. It will give you an opportunity to easily test your work and your peers’ work. You will find these tests especially useful during your defence. Indeed, during defence, you are free to use your tests and/or the tests of the peer you are evaluating.</li>
+          <li>Submit your work to the assigned Git repository. Only the work in the Git repository will be graded. If Deepthought is assigned to grade your work, it will occur after your peer-evaluations. If an error happens in any section of your work during Deepthought’s grading, the evaluation will stop.</li>
+        </ul></div>
+        <div class="ja"><ul>
+          <li>プロジェクトはCで書くこと。</li>
+          <li>Norm に準拠して書くこと。ボーナスのファイル/関数がある場合はそれらもNormチェックの対象に含まれ、Normエラーが1つでもあれば0点になります。</li>
+          <li>関数は（未定義動作の場合を除き）予期せず終了してはなりません（segmentation fault、bus error、double free など）。これが起きた場合、プロジェクトは非機能と見なされ、評価で0点になります。</li>
+          <li>ヒープに確保したメモリは、必要なときに適切に解放すること。メモリリークは容認されません。</li>
+          <li>課題が要求する場合、cc と -Wall、-Wextra、-Werror フラグを使ってソースファイルを所定の成果物にコンパイルする Makefile を提出すること。さらに、Makefile は不要な再リンクを行ってはいけません。</li>
+          <li>Makefile には少なくとも $(NAME), all, clean, fclean, re のルールを含めること。</li>
+          <li>ボーナスを提出するには、本体では許可されていないヘッダ・ライブラリ・関数を追加する bonus ルールを Makefile に含めること。課題に特段の指定がない限り、ボーナスは _bonus.{c/h} ファイルに置くこと。必須部分とボーナス部分の評価は別々に行われます。</li>
+          <li>プロジェクトで libft の使用が許可されている場合、そのソースと Makefile を libft フォルダにコピーすること。プロジェクトの Makefile は、まずライブラリ側の Makefile でライブラリをコンパイルし、その後プロジェクトをコンパイルすること。</li>
+          <li>テストプログラムの作成を推奨します（<b>提出・採点対象外</b>）。自分や仲間の作業を手軽にテストでき、ディフェンスで特に役立ちます。ディフェンス中は、自分のテストや評価相手のテストを自由に使えます。</li>
+          <li>課題は割り当てられたGitリポジトリに提出すること。Gitリポジトリ内の成果物のみが採点されます。Deepthought が採点に割り当てられている場合、それはピア評価の後に行われます。Deepthought の採点中にいずれかのセクションでエラーが起きた場合、評価はそこで停止します。</li>
+        </ul></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter IV -->
+  <details class="chapter" open>
+    <summary><span class="chno">Chapter IV</span><span class="en">Overview</span><span class="ja">全体像</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en"><p>Here are the things you need to know if you want to succeed in this assignment:</p>
+        <ul>
+          <li>One or more <b>coders</b> sit in a circular inclusive co-working hub. In the center, there is a shared <b>Quantum Compiler</b>.</li>
+          <li>The coders alternatively <b>compile</b>, <b>debug</b>, or <b>refactor</b>. While compiling, they are not debugging nor refactoring; while debugging, they are not compiling nor refactoring; and, of course, while refactoring, they are not compiling nor debugging.</li>
+          <li>There are <b>USB dongles</b> on the table. There are <b>as many dongles as coders</b>.</li>
+          <li>Compiling quantum code requires two dongles plugged in simultaneously, one in each hand: a coder takes their left and right dongles to compile.</li>
+          <li>When a coder finishes compiling, they put both dongles back on the table and start debugging. Once debugging is done, they start refactoring. The simulation stops when a coder <b>burns out</b> due to lack of compiling.</li>
+          <li>Every coder needs to compile regularly and should never burn out.</li>
+          <li>Coders do not communicate with each other.</li>
+          <li>Coders do not know if another coder is about to burn out.</li>
+          <li>Needless to say, coders should avoid burnout!</li>
+        </ul></div>
+        <div class="ja"><p>この課題を成功させたいなら、知っておくべきことは次のとおりです:</p>
+        <ul>
+          <li>1人以上の<b>コーダー</b>が、円形のインクルーシブなコワーキングハブに座っています。中央には共有の <b>Quantum Compiler（量子コンパイラ）</b>があります。</li>
+          <li>コーダーは<b>コンパイル</b>、<b>デバッグ</b>、<b>リファクタリング</b>を交互に行います。コンパイル中はデバッグもリファクタリングもしません。デバッグ中はコンパイルもリファクタリングもしません。そしてもちろん、リファクタリング中はコンパイルもデバッグもしません。</li>
+          <li>テーブルの上には<b>USBドングル</b>があります。<b>ドングルの数はコーダーの数と同じ</b>です。</li>
+          <li>量子コードのコンパイルには、両手に1本ずつ、2本のドングルを同時に挿す必要があります: コーダーは自分の左と右のドングルを取ってコンパイルします。</li>
+          <li>コンパイルを終えると、コーダーは両方のドングルをテーブルに戻してデバッグを始めます。デバッグが終わるとリファクタリングを始めます。コーダーがコンパイル不足で<b>燃え尽きる（burn out）</b>とシミュレーションは停止します。</li>
+          <li>すべてのコーダーは定期的にコンパイルする必要があり、決して燃え尽きてはいけません。</li>
+          <li>コーダー同士はコミュニケーションを取りません。</li>
+          <li>コーダーは、他のコーダーが燃え尽きそうかどうかを知りません。</li>
+          <li>言うまでもなく、コーダーは燃え尽きを避けるべきです！</li>
+        </ul></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter V -->
+  <details class="chapter" open>
+    <summary><span class="chno">Chapter V</span><span class="en">Global rules</span><span class="ja">グローバルルール</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en"><p>You have to write <b>one program</b> that complies with the following rules:</p>
+        <ul>
+          <li><b>Global variables are forbidden!</b></li>
+          <li>Your program must take the following arguments (all mandatory):<br>
+          <code>number_of_coders time_to_burnout time_to_compile time_to_debug time_to_refactor number_of_compiles_required dongle_cooldown scheduler</code>
+            <ul>
+              <li><code>number_of_coders</code>: The number of coders and also the number of dongles.</li>
+              <li><code>time_to_burnout</code> (in milliseconds): If a coder did not start compiling within time_to_burnout milliseconds since the beginning of their last compile or the beginning of the simulation, they burn out.</li>
+              <li><code>time_to_compile</code> (in milliseconds): The time it takes for a coder to compile. During that time, they must hold two dongles.</li>
+              <li><code>time_to_debug</code> (in milliseconds): The time a coder will spend debugging.</li>
+              <li><code>time_to_refactor</code> (in milliseconds): The time a coder will spend refactoring. After completing the refactoring phase, the coder will immediately attempt to acquire dongles and start compiling again.</li>
+              <li><code>number_of_compiles_required</code>: If all coders have compiled at least this many times, the simulation stops. Otherwise, it stops when a coder burns out.</li>
+              <li><code>dongle_cooldown</code> (in milliseconds): After being released, a dongle is <b>unavailable</b> until its cooldown has passed.</li>
+              <li><code>scheduler</code>: The arbitration policy used by dongles to decide who gets them when multiple coders request them. The value must be exactly one of: <code>fifo</code> or <code>edf</code>. fifo means <i>First In, First Out</i>: the dongle is granted to the coder whose request arrived first. edf means <i>Earliest Deadline First</i> with deadline = last_compile_start + time_to_burnout.</li>
+            </ul>
+          </li>
+          <li>Each coder has a number ranging from 1 to number_of_coders.</li>
+          <li>Coder number 1 sits next to coder number number_of_coders. Any other coder number N sits between coder number N - 1 and coder number N + 1.</li>
+        </ul></div>
+        <div class="ja"><p>以下のルールに従う<b>1つのプログラム</b>を書かなければなりません:</p>
+        <ul>
+          <li><b>グローバル変数は禁止！</b></li>
+          <li>プログラムは以下の引数を取ること（すべて必須）:<br>
+          <code>number_of_coders time_to_burnout time_to_compile time_to_debug time_to_refactor number_of_compiles_required dongle_cooldown scheduler</code>
+            <ul>
+              <li><code>number_of_coders</code>: コーダーの数。同時にドングルの数でもあります。</li>
+              <li><code>time_to_burnout</code>（ミリ秒）: 最後のコンパイル開始（またはシミュレーション開始）から time_to_burnout ミリ秒以内にコンパイルを開始できなかったコーダーは燃え尽きます。</li>
+              <li><code>time_to_compile</code>（ミリ秒）: コンパイルにかかる時間。この間、コーダーは2本のドングルを保持していなければなりません。</li>
+              <li><code>time_to_debug</code>（ミリ秒）: デバッグに費やす時間。</li>
+              <li><code>time_to_refactor</code>（ミリ秒）: リファクタリングに費やす時間。リファクタリング完了後、コーダーは直ちにドングルの取得を試み、再びコンパイルを始めます。</li>
+              <li><code>number_of_compiles_required</code>: 全コーダーが少なくともこの回数コンパイルしたら、シミュレーションは停止します。そうでなければ、コーダーが燃え尽きた時点で停止します。</li>
+              <li><code>dongle_cooldown</code>（ミリ秒）: 解放された後、ドングルはクールダウンが経過するまで<b>使用不可</b>になります。</li>
+              <li><code>scheduler</code>: 複数のコーダーが同じドングルを要求したとき、誰に渡すかをドングルが決める調停ポリシー。値は <code>fifo</code> か <code>edf</code> のいずれかちょうど1つ。fifo は <i>First In, First Out</i>: 要求が最初に届いたコーダーにドングルを渡します。edf は <i>Earliest Deadline First</i> で、期限 = last_compile_start + time_to_burnout です。</li>
+            </ul>
+          </li>
+          <li>各コーダーは 1 から number_of_coders までの番号を持ちます。</li>
+          <li>コーダー1はコーダー number_of_coders の隣に座ります。その他のコーダーNは、コーダー N−1 と N+1 の間に座ります。</li>
+        </ul></div>
+      </div>
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p><b>Reminder:</b> All arguments are mandatory. Reject invalid inputs such as negative numbers, non-integers, or a scheduler other than fifo or edf.</p></div>
+          <div class="ja"><p><b>注意:</b> すべての引数は必須です。負の数、整数でない値、fifo / edf 以外のスケジューラといった不正な入力は拒否すること。</p></div>
+        </div>
+      </div>
+      <div class="bi">
+        <div class="en"><p>About the logs of your program:</p>
+        <ul>
+          <li>Any state change of a coder must be formatted as follows:
+            <ul>
+              <li><code>timestamp_in_ms X has taken a dongle</code></li>
+              <li><code>timestamp_in_ms X is compiling</code></li>
+              <li><code>timestamp_in_ms X is debugging</code></li>
+              <li><code>timestamp_in_ms X is refactoring</code></li>
+              <li><code>timestamp_in_ms X burned out</code></li>
+            </ul>
+          Replace timestamp_in_ms with the current timestamp in milliseconds and X with the coder number.</li>
+          <li>A displayed state message should not be mixed up with another message.</li>
+          <li>A message announcing that a coder burned out should be displayed no more than 10 ms after the actual burnout.</li>
+          <li>Again, coders should avoid burning out!</li>
+        </ul></div>
+        <div class="ja"><p>プログラムのログについて:</p>
+        <ul>
+          <li>コーダーの状態変化は、すべて次の形式でなければなりません:
+            <ul>
+              <li><code>timestamp_in_ms X has taken a dongle</code>（ドングルを取った）</li>
+              <li><code>timestamp_in_ms X is compiling</code>（コンパイル中）</li>
+              <li><code>timestamp_in_ms X is debugging</code>（デバッグ中）</li>
+              <li><code>timestamp_in_ms X is refactoring</code>（リファクタリング中）</li>
+              <li><code>timestamp_in_ms X burned out</code>（燃え尽きた）</li>
+            </ul>
+          timestamp_in_ms は現在のタイムスタンプ（ミリ秒）に、X はコーダー番号に置き換えます。</li>
+          <li>表示される状態メッセージは、他のメッセージと混ざってはいけません。</li>
+          <li>コーダーの燃え尽きを知らせるメッセージは、実際の燃え尽きから10ミリ秒以内に表示すること。</li>
+          <li>繰り返しますが、コーダーは燃え尽きを避けるべきです！</li>
+        </ul></div>
+      </div>
+      <div class="bi">
+        <div class="en"><p>Example of the expected log format:</p></div>
+        <div class="ja"><p>期待されるログ形式の例:</p></div>
+      </div>
+      <pre class="code">0 1 has taken a dongle
+1 1 has taken a dongle
+1 1 is compiling
+201 1 is debugging
+401 1 is refactoring
+402 2 has taken a dongle
+403 2 has taken a dongle
+403 2 is compiling
+603 2 is debugging
+803 2 is refactoring
+1204 3 burned out</pre>
+      <div class="warn">
+        <div class="bi">
+          <div class="en"><p><b>Precision requirement:</b> Burnout logs must be displayed within 10 ms of the actual burnout time. Allow a minimal tolerance when testing, as hardware and OS scheduling may slightly affect measured timings.</p></div>
+          <div class="ja"><p><b>精度要件:</b> burnout のログは、実際の燃え尽き時刻から10ms以内に表示しなければなりません。ハードウェアやOSのスケジューリングが計測値にわずかに影響することがあるため、テスト時には最小限の許容誤差を認めてください。</p></div>
+        </div>
+      </div>
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p><b>Timing consideration:</b> To reduce hardware impact on performance measurements, consider using CPU usage time instead of real-time clock when feasible. However, for this project, real-time measurements using gettimeofday() are acceptable and recommended for simplicity.</p></div>
+          <div class="ja"><p><b>時間計測について:</b> 計測へのハードウェアの影響を減らすには、可能ならば実時間クロックの代わりにCPU使用時間の利用も考えられます。ただし本プロジェクトでは、簡単のため gettimeofday() による実時間計測が許容されており、推奨されています。</p></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter VI -->
+  <details class="chapter" open>
+    <summary><span class="chno">Chapter VI</span><span class="en">Mandatory part</span><span class="ja">必須課題</span></summary>
+    <div class="body">
+      <table class="spec">
+        <tr><th>Program Name<br><span style="font-weight:400;color:var(--muted)">プログラム名</span></th><td><code>codexion</code></td></tr>
+        <tr><th>Files to Submit<br><span style="font-weight:400;color:var(--muted)">提出ファイル</span></th><td>Makefile at the root, *.c and *.h in the folder of your choice<br>ルートに Makefile、任意のフォルダに *.c と *.h</td></tr>
+        <tr><th>Makefile</th><td>NAME, all, clean, fclean, re</td></tr>
+        <tr><th>Arguments<br><span style="font-weight:400;color:var(--muted)">引数</span></th><td><code>number_of_coders time_to_burnout time_to_compile time_to_debug time_to_refactor number_of_compiles_required dongle_cooldown scheduler</code></td></tr>
+        <tr><th>External Functions<br><span style="font-weight:400;color:var(--muted)">使用可能な外部関数</span></th><td><code>pthread_create, pthread_join, pthread_mutex_init, pthread_mutex_lock, pthread_mutex_unlock, pthread_mutex_destroy, pthread_cond_init, pthread_cond_wait, pthread_cond_timedwait, pthread_cond_signal, pthread_cond_broadcast, pthread_cond_destroy, gettimeofday, clock_gettime, usleep, write, malloc, free, printf, fprintf, strcmp, strlen, atoi, memset</code></td></tr>
+        <tr><th>Libft authorized<br><span style="font-weight:400;color:var(--muted)">libft 使用可否</span></th><td>No ／ 不可</td></tr>
+        <tr><th>Description<br><span style="font-weight:400;color:var(--muted)">説明</span></th><td>Coders with threads and mutexes (C)<br>スレッドとミューテックスによるコーダー（C）</td></tr>
+      </table>
+      <div class="bi">
+        <div class="en"><p>The specific rules for the mandatory part are:</p>
+        <ul>
+          <li>Each coder must be represented by a thread (using pthread_create).</li>
+          <li>There is one dongle between each pair of coders. Therefore, if there are several coders, each coder has a dongle on their left side and a dongle on their right side. If there is only one coder, there should be only one dongle on the table.</li>
+          <li>To prevent coders from duplicating dongles, you must protect each dongle’s state with a mutex (pthread_mutex_t). A condition variable (pthread_cond_t) may be used to manage waiting queues.</li>
+          <li><b>Dongle cooldown is mandatory</b>: after a coder releases a dongle, the dongle cannot be taken again until dongle_cooldown milliseconds have elapsed.</li>
+          <li><b>Fair arbitration is mandatory</b>: when multiple coders request the same dongle, the dongle must grant access according to scheduler. With fifo, serve requests in arrival order. With edf, serve the coder with the earliest burnout deadline (i.e., last_compile_start + time_to_burnout).</li>
+          <li>The program must guarantee liveness: no coder should be starved of dongles and burn out under edf scheduling, provided the parameters are feasible.</li>
+          <li>A separate <b>monitor</b> thread must detect burnout precisely and stop the simulation. The burnout log must be printed within 10 ms of the actual burnout time.</li>
+          <li>Logging must be serialized so that two messages never interleave on a single line (use a mutex to protect output).</li>
+          <li>The simulation stops either when a coder burns out or when every coder has compiled at least number_of_compiles_required times.</li>
+          <li>Your code must compile with -Wall -Wextra -Werror -pthread.</li>
+          <li>You must implement a priority queue (heap) for FIFO/EDF scheduling (no standard library priority queue may be used).</li>
+          <li>All memory must be properly allocated and freed (no memory leaks).</li>
+        </ul></div>
+        <div class="ja"><p>必須課題の具体的なルールは次のとおりです:</p>
+        <ul>
+          <li>各コーダーはスレッドで表現すること（pthread_create を使用）。</li>
+          <li>コーダーの各ペアの間にドングルが1本あります。したがって複数のコーダーがいる場合、各コーダーの左側と右側に1本ずつドングルがあります。コーダーが1人だけの場合、テーブルの上にはドングルが1本だけあるべきです。</li>
+          <li>コーダーによるドングルの複製を防ぐため、各ドングルの状態を mutex（pthread_mutex_t）で保護しなければなりません。待ち行列の管理には条件変数（pthread_cond_t）を使ってもかまいません。</li>
+          <li><b>ドングルのクールダウンは必須</b>: コーダーがドングルを解放した後、dongle_cooldown ミリ秒が経過するまで、そのドングルは再取得できません。</li>
+          <li><b>公平な調停は必須</b>: 複数のコーダーが同じドングルを要求した場合、ドングルは scheduler に従ってアクセスを許可しなければなりません。fifo では要求の到着順に処理します。edf では燃え尽き期限（last_compile_start + time_to_burnout）が最も早いコーダーを処理します。</li>
+          <li>プログラムは liveness（活性）を保証すること: パラメータが実現可能である限り、edf スケジューリングでドングルに飢えて（starvation）燃え尽きるコーダーが出てはいけません。</li>
+          <li>独立した<b>monitor（監視）</b>スレッドが燃え尽きを正確に検出し、シミュレーションを停止すること。burnout のログは実際の燃え尽き時刻から10ms以内に出力すること。</li>
+          <li>ログはシリアライズし、2つのメッセージが決して1行に混ざらないようにすること（出力の保護に mutex を使う）。</li>
+          <li>シミュレーションは、コーダーが燃え尽きるか、全コーダーが number_of_compiles_required 回以上コンパイルした時点で停止します。</li>
+          <li>コードは -Wall -Wextra -Werror -pthread でコンパイルできること。</li>
+          <li>FIFO/EDF スケジューリング用の優先度キュー（ヒープ）を自作すること（標準ライブラリの優先度キューは使用不可）。</li>
+          <li>すべてのメモリを適切に確保・解放すること（メモリリークなし）。</li>
+        </ul></div>
+      </div>
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p><b>Note:</b> Due to timestamp precision, equal deadlines may rarely occur in practice. The tie-breaker rule is required to ensure a fully deterministic EDF policy, even in edge cases.</p></div>
+          <div class="ja"><p><b>注:</b> タイムスタンプの精度により、実際には期限がちょうど等しくなることは稀です。タイブレーク（同点処理）ルールは、エッジケースでも完全に決定的な EDF ポリシーを保証するために必要です。</p></div>
+        </div>
+      </div>
+      <div class="bi">
+        <div class="en"><p>Example of simulation run:</p></div>
+        <div class="ja"><p>シミュレーション実行例:</p></div>
+      </div>
+      <pre class="code">0 1 has taken a dongle
+2 1 has taken a dongle
+2 1 is compiling
+202 1 is debugging
+402 1 is refactoring
+405 2 has taken a dongle
+406 2 has taken a dongle
+406 2 is compiling
+606 2 is debugging
+806 2 is refactoring
+900 3 has taken a dongle
+902 3 has taken a dongle
+902 3 is compiling
+1102 3 is debugging
+1302 3 is refactoring
+1505 4 burned out</pre>
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p>This example illustrates the sequence of actions for multiple coders. Note how each "compiling" action is preceded by two "has taken a dongle" lines, and how the "burned out" message appears at the moment a coder misses their deadline.</p></div>
+          <div class="ja"><p>この例は複数コーダーの動作シーケンスを示しています。各 "is compiling" の前に必ず2行の "has taken a dongle" があること、そしてコーダーが期限を逃した瞬間に "burned out" メッセージが現れることに注目してください。</p></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter VII -->
+  <details class="chapter" open>
+    <summary><span class="chno">Chapter VII</span><span class="en">Readme Requirements</span><span class="ja">READMEの要件</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en"><p>A README.md file must be provided at the root of your Git repository. Its purpose is to allow anyone unfamiliar with the project (peers, staff, recruiters, etc.) to quickly understand what the project is about, how to run it, and where to find more information on the topic.</p>
+        <p>The README.md must include at least:</p>
+        <ul>
+          <li>The very first line must be italicized and read: <i>This project has been created as part of the 42 curriculum by &lt;login1&gt;[, &lt;login2&gt;[, &lt;login3&gt;[...]]].</i></li>
+          <li>A “<b>Description</b>” section that clearly presents the project, including its goal and a brief overview.</li>
+          <li>An “<b>Instructions</b>” section containing any relevant information about compilation, installation, and/or execution.</li>
+          <li>A “<b>Resources</b>” section listing classic references related to the topic (documentation, articles, tutorials, etc.), as well as a description of how AI was used — specifying for which tasks and which parts of the project.</li>
+          <li><b>Additional sections may be required depending on the project</b> (e.g., usage examples, feature list, technical choices, etc.).</li>
+        </ul>
+        <p>For this project, the README.md must also include:</p>
+        <ul>
+          <li>A “<b>Blocking cases handled</b>” section describing all the concurrency issues addressed in your solution (e.g., deadlock prevention and Coffman’s conditions, starvation prevention, cooldown handling, precise burnout detection, and log serialization).</li>
+          <li>A “<b>Thread synchronization mechanisms</b>” section explaining the specific threading primitives used in your implementation (pthread_mutex_t, pthread_cond_t, custom event implementation) and how they coordinate access to shared resources (dongles, logging, monitor state). Include examples of how race conditions are prevented and how thread-safe communication is achieved between coders and the monitor.</li>
+        </ul></div>
+        <div class="ja"><p>README.md ファイルをGitリポジトリのルートに置くこと。その目的は、プロジェクトを知らない人（ピア、スタッフ、リクルーターなど）が、プロジェクトの内容・実行方法・関連情報の所在をすばやく理解できるようにすることです。</p>
+        <p>README.md には少なくとも以下を含めること:</p>
+        <ul>
+          <li>最初の行は斜体で次のとおり書く: <i>This project has been created as part of the 42 curriculum by &lt;login1&gt;[, &lt;login2&gt;[, &lt;login3&gt;[...]]].</i></li>
+          <li>プロジェクトの目標と概要を明確に示す「<b>Description</b>」セクション</li>
+          <li>コンパイル・インストール・実行に関する情報を含む「<b>Instructions</b>」セクション</li>
+          <li>トピックに関連する定番の参考資料（ドキュメント、記事、チュートリアルなど）に加え、AIをどう使ったか（どのタスク・どの部分に使ったか）の説明を含む「<b>Resources</b>」セクション</li>
+          <li><b>プロジェクトによっては追加セクションが必要になる場合があります</b>（使用例、機能一覧、技術的選択など）。</li>
+        </ul>
+        <p>本プロジェクトでは、README.md に以下も含めること:</p>
+        <ul>
+          <li>「<b>Blocking cases handled</b>」セクション: ソリューションで対処した並行処理の問題をすべて記述する（例: デッドロック防止と Coffman の4条件、starvation（飢餓）防止、クールダウン処理、正確な burnout 検出、ログのシリアライズ）。</li>
+          <li>「<b>Thread synchronization mechanisms</b>」セクション: 実装で使ったスレッドプリミティブ（pthread_mutex_t、pthread_cond_t、独自のイベント実装）と、それらが共有リソース（ドングル、ログ出力、モニタの状態）へのアクセスをどう調整するかを説明する。レースコンディションをどう防いだか、コーダーとモニタ間のスレッドセーフな通信をどう実現したかの例を含めること。</li>
+        </ul></div>
+      </div>
+      <div class="note">
+        <div class="bi">
+          <div class="en"><p>Your README must be written in English.</p></div>
+          <div class="ja"><p>READMEは英語で書くこと。</p></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Chapter VIII -->
+  <details class="chapter">
+    <summary><span class="chno">Chapter VIII</span><span class="en">Submission and peer-evaluation</span><span class="ja">提出とピア評価</span></summary>
+    <div class="body">
+      <div class="bi">
+        <div class="en"><p>Turn in your assignment in your Git repository as usual. Only the work inside your repository will be evaluated during the defense. Don’t hesitate to double-check the names of your files to ensure they are correct.</p>
+        <h4>Recode instructions</h4>
+        <p>During the evaluation, a brief <b>modification of the project</b> may occasionally be requested. This could involve a minor behaviour change, a few lines of code to write or rewrite, or an easy-to-add feature.</p>
+        <p>While this step may <b>not be applicable to every project</b>, you must be prepared for it if it is mentioned in the evaluation guidelines.</p>
+        <p>This step is meant to verify your actual understanding of a specific part of the project. The modification can be performed in any development environment you choose (e.g., your usual setup), and it should be feasible within a few minutes — unless a specific time frame is defined as part of the evaluation.</p>
+        <p>You can, for example, be asked to make a small update to a function or script, modify a display, or adjust a data structure to store new information, etc.</p>
+        <p>The details (scope, target, etc.) will be specified in the <b>evaluation guidelines</b> and may vary from one evaluation to another for the same project.</p></div>
+        <div class="ja"><p>いつもどおり、Gitリポジトリに課題を提出してください。ディフェンス中はリポジトリ内の成果物のみが評価されます。ファイル名が正しいか、遠慮なく再確認してください。</p>
+        <h4>Recode（その場での修正）について</h4>
+        <p>評価中に、プロジェクトの簡単な<b>修正</b>を求められることがあります。小さな挙動の変更、数行のコードの記述や書き直し、追加が容易な機能などです。</p>
+        <p>このステップは<b>すべてのプロジェクトに適用されるとは限りません</b>が、評価ガイドラインに記載されている場合は準備しておかなければなりません。</p>
+        <p>このステップの目的は、プロジェクトの特定部分に対するあなたの実際の理解を確認することです。修正は任意の開発環境（普段の環境など）で行うことができ、評価の一部として特定の時間枠が定義されていない限り、数分以内で実行可能なはずです。</p>
+        <p>例えば、関数やスクリプトの小さな更新、表示の変更、新しい情報を保存するためのデータ構造の調整などを求められる場合があります。</p>
+        <p>詳細（範囲・対象など）は<b>評価ガイドライン</b>に明記され、同じプロジェクトでも評価ごとに異なる場合があります。</p></div>
+      </div>
+    </div>
+  </details>
+</main>
+<footer class="site">出典: en.codexion.pdf（Version 1.5）。和訳は非公式の参考訳です。正確な要件は必ず原文で確認してください。</footer>
+<script>
+const setMode = (m) => {
+  document.body.className = 'mode-' + m;
+  try { localStorage.setItem('lang', m); } catch (e) {}
+  document.querySelectorAll('.langbar button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+};
+document.querySelectorAll('.langbar button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+let saved = 'both';
+try { saved = localStorage.getItem('lang') || 'both'; } catch (e) {}
+setMode(saved);
+</script>
+</body>
+</html>
