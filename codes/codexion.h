@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:07:57 by kamurai           #+#    #+#             */
-/*   Updated: 2026/09/29 04:35:06 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/01 06:51:17 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,9 @@
 
 # include <stdio.h>
 # include <stdint.h>
+# include <stdlib.h>
 # include <stdbool.h>
+# include <pthread.h>
 
 typedef struct s_data
 {
@@ -29,6 +31,12 @@ typedef struct s_data
 	char		*scheduler;
 }		t_data;
 
-uintmax_t	arg_to_num(char *str);
+typedef struct s_corder
+{
+	
+}	t_corder;
+
+bool	is_scheduler(char *str);
+bool	set_num(char *str, uintmax_t *num);
 
 #endif

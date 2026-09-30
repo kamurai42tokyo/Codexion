@@ -6,11 +6,11 @@
 <title>Codexion ルール図解</title>
 <style>
   :root {
-    --bg: #f6f6f3;
-    --surface: #ffffff;
+    --bg: #e2e2de;
+    --surface: #fcfcfb;
     --text: #1d1d1f;
     --muted: #5f6368;
-    --border: #dcdcd6;
+    --border: #e1e0d9;
     --compile: #2f6fdb;
     --debug: #1e8e5a;
     --refactor: #c77700;
@@ -125,9 +125,16 @@
   .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 10px 0 0; padding: 0; list-style: none; }
   .legend li { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
   .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .theme-toggle {
+    position: fixed; top: 12px; right: 12px; z-index: 10;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; font: inherit; font-size: 0.85rem; cursor: pointer;
+  }
 </style>
 </head>
 <body>
+<button type="button" class="theme-toggle" id="theme-toggle"></button>
 <main>
   <h1>Codexion ルール図解</h1>
   <p class="lead">コーダー（スレッド）がドングルを取り合いながら、コンパイル・デバッグ・リファクタリングを繰り返す課題のルールを、図でまとめたページです。</p>
@@ -404,5 +411,30 @@
     </ul>
   </section>
 </main>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('theme-toggle');
+    var media = window.matchMedia('(prefers-color-scheme: dark)');
+    function current() {
+      return root.getAttribute('data-theme') || (media.matches ? 'dark' : 'light');
+    }
+    function render() {
+      btn.textContent = current() === 'dark' ? '☀ ライト' : '☾ ダーク';
+    }
+    try {
+      var saved = localStorage.getItem('theme');
+      if (saved) root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    btn.addEventListener('click', function () {
+      var next = current() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      render();
+    });
+    media.addEventListener('change', render);
+    render();
+  })();
+</script>
 </body>
 </html>

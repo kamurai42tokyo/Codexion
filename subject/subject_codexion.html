@@ -11,11 +11,7 @@
   <div class="inner">
     <a class="brand" href="index.html">42 Milestone 3 課題まとめ</a>
     <nav>
-      <a href="index.html">概要</a>
-      <a href="call-me-maybe.html">Call Me Maybe</a>
-      <a href="codexion.html" class="here">Codexion</a>
-      <a href="fly-in.html">Fly-in</a>
-      <a href="comparison.html">難易度比較</a>
+      <a href="subject_codexion.html" class="here">Codexion</a>
     </nav>
   </div>
 </header>
@@ -68,6 +64,10 @@
     <button data-m="both" class="on">対訳</button>
     <button data-m="en">English</button>
     <button data-m="ja">日本語</button>
+    <span class="sep"></span>
+    <span class="lbl">テーマ:</span>
+    <button data-t="light">ホワイト</button>
+    <button data-t="dark">ダーク</button>
   </div>
 
   <!-- Chapter I -->
@@ -524,12 +524,22 @@
 const setMode = (m) => {
   document.body.className = 'mode-' + m;
   try { localStorage.setItem('lang', m); } catch (e) {}
-  document.querySelectorAll('.langbar button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  document.querySelectorAll('.langbar button[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
 };
-document.querySelectorAll('.langbar button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+document.querySelectorAll('.langbar button[data-m]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
 let saved = 'both';
 try { saved = localStorage.getItem('lang') || 'both'; } catch (e) {}
 setMode(saved);
+
+const setTheme = (t) => {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  document.querySelectorAll('.langbar button[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+};
+document.querySelectorAll('.langbar button[data-t]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.t)));
+let savedTheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+try { savedTheme = localStorage.getItem('theme') || savedTheme; } catch (e) {}
+setTheme(savedTheme);
 </script>
 </body>
 </html>
