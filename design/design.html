@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>設計書（やさしい版）: Codexion</title>
+<style>
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --fg:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#c2410c; --accent-soft:#ffedd5;
+  --code-bg:#f1f5f9;
+  --tip-bg:#1e293b; --tip-fg:#f1f5f9;
+  --shadow:0 1px 3px rgba(15,23,42,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+    --code-bg:#0b1220;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+  --code-bg:#0b1220;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.9;font-size:15.5px}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1100px;margin:0 auto;gap:0 40px;padding:0 24px}
+main{padding:28px 0 90px;min-width:0}
+/* ---- 目次 ---- */
+nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 8px 28px 0;font-size:13px}
+nav.toc .toc-title{font-weight:700;color:var(--muted);font-size:11px;letter-spacing:.06em;margin-bottom:10px}
+nav.toc ol{list-style:none;margin:0;padding:0}
+nav.toc li{margin:2px 0}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 10px;border-left:2px solid var(--border)}
+nav.toc a:hover{color:var(--fg)}
+nav.toc a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600;background:linear-gradient(90deg,var(--accent-soft),transparent)}
+@media (max-width:900px){
+  .layout{display:block}
+  nav.toc{position:static;height:auto;border-bottom:1px solid var(--border);margin-bottom:8px}
+}
+/* ---- ヘッダ・案内 ---- */
+.doc-head h1{font-size:25px;margin:0 0 4px}
+.doc-head h1 .accent{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted)}
+.meta span+span::before{content:"･";margin:0 8px;color:var(--border)}
+.guide{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:18px 0 0;box-shadow:var(--shadow)}
+.guide .g-title{font-weight:700;font-size:14px;margin-bottom:6px}
+.guide table{border-collapse:collapse;font-size:13.5px}
+.guide td{padding:3px 0;vertical-align:top}
+.guide td:first-child{color:var(--muted);padding-right:16px;white-space:nowrap}
+.guide a{color:var(--accent);text-decoration:none}
+.guide a:hover{text-decoration:underline}
+/* ---- 見出し・本文 ---- */
+section{margin-top:48px}
+h2{font-size:20px;margin:0 0 14px;padding:6px 0 6px 14px;border-left:4px solid var(--accent)}
+p{margin:10px 0}
+ul.plain{padding-left:22px;margin:8px 0}
+ul.plain li{margin:7px 0}
+ol.steps{padding-left:24px;margin:8px 0}
+ol.steps li{margin:9px 0}
+b{font-weight:700}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code-bg);
+  padding:1px 6px;border-radius:5px;border:1px solid var(--border)}
+.callout{border-left:3px solid var(--accent);background:var(--panel);border-radius:0 10px 10px 0;
+  padding:11px 16px;margin:14px 0;font-size:14px;box-shadow:var(--shadow)}
+.idea{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 18px;margin:12px 0;box-shadow:var(--shadow)}
+.idea .i-title{font-weight:700;color:var(--accent);font-size:14.5px;margin-bottom:4px}
+/* ---- 用語（ホバー解説） ---- */
+.term{border-bottom:1.5px dotted var(--accent);cursor:help}
+.tip{position:absolute;display:none;max-width:340px;background:var(--tip-bg);color:var(--tip-fg);
+  padding:9px 13px;border-radius:9px;font-size:12.5px;line-height:1.7;z-index:60;
+  box-shadow:0 6px 20px rgba(0,0,0,.35);pointer-events:none}
+/* ---- 用語集 ---- */
+dl.glossary{margin:8px 0}
+dl.glossary dt{font-weight:700;color:var(--accent);margin-top:14px}
+dl.glossary dd{margin:2px 0 0 0;font-size:14px}
+/* ---- ゴールのチェックリスト ---- */
+.dod-head{display:flex;align-items:center;gap:14px;margin:14px 0 6px;flex-wrap:wrap}
+.dod-count{font:700 13px ui-monospace,monospace;color:var(--accent)}
+.dod-progress{flex:1;max-width:240px;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.dod-bar{height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .3s}
+.dod-note{font-size:11.5px;color:var(--muted)}
+ul.dod{list-style:none;padding:0;margin:8px 0}
+ul.dod li{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border:1px solid var(--border);
+  border-radius:10px;margin:8px 0;background:var(--panel);box-shadow:var(--shadow)}
+ul.dod input{margin-top:6px;accent-color:var(--accent);width:15px;height:15px;flex:none;cursor:pointer}
+ul.dod li.done label{color:var(--muted);text-decoration:line-through}
+ul.dod label{cursor:pointer}
+/* ---- 図 ---- */
+figure.diagram{border:1px solid var(--border);border-radius:12px;padding:18px 20px;background:var(--panel);
+  margin:14px 0;overflow-x:auto;box-shadow:var(--shadow)}
+figure.diagram figcaption{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+.d-flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:10px 0}
+.d-step{border:1.5px solid var(--accent);border-radius:10px;padding:8px 14px;background:var(--accent-soft);
+  font-size:13.5px;text-align:center;max-width:190px;display:flex;flex-direction:column;justify-content:center}
+.d-step .d-num{display:inline-block;font:700 11px/1.8 ui-monospace,monospace;color:var(--accent);margin-bottom:2px}
+.d-step .d-cap{font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:3px}
+.d-step.plain{border-color:var(--border);background:var(--code-bg)}
+.d-arr{color:var(--muted);align-self:center;font-size:18px;flex:none}
+footer{margin-top:60px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted)}
+#theme-toggle{position:fixed;top:14px;right:16px;z-index:70;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);border-radius:50%;width:38px;height:38px;
+  cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+@media print{
+  nav.toc,#theme-toggle,.tip,.dod-note{display:none!important}
+  .layout{display:block;max-width:none;padding:0}
+  body{background:#fff;color:#000;font-size:10.5pt}
+  main{padding:0}
+  figure.diagram,.idea,ul.dod li,.callout{box-shadow:none;break-inside:avoid}
+  section{margin-top:24px}
+  h2{break-after:avoid}
+  .term{border-bottom:none}
+}
+</style>
+</head>
+<body>
+<button id="theme-toggle" title="ダーク/ライト切替" aria-label="テーマ切替">◐</button>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <div class="toc-title">目次</div>
+  <ol>
+    <li><a href="#sec-1">1. ひとことで言うと</a></li>
+    <li><a href="#sec-2">2. 全体の流れ</a></li>
+    <li><a href="#sec-3">3. ゴール（完成の条件）</a></li>
+    <li><a href="#sec-4">4. どう作る？</a></li>
+    <li><a href="#sec-5">5. どう確かめる？</a></li>
+    <li><a href="#sec-6">6. 作る順番</a></li>
+    <li><a href="#sec-7">7. つまずきやすいポイント</a></li>
+    <li><a href="#sec-8">8. 用語集</a></li>
+  </ol>
+</nav>
+<main>
+
+<header class="doc-head">
+  <h1>設計書（やさしい版）: <span class="accent">Codexion</span></h1>
+  <div class="meta">
+    <span>Subject: en.codexion.pdf (v1.5)</span>
+    <span>作成者: kamurai</span>
+    <span>最終更新: 2026-07-30</span>
+  </div>
+  <div class="guide">
+    <div class="g-title">📖 読み方ガイド</div>
+    <table>
+      <tr><td>3分でざっくり知りたい</td><td><a href="#sec-1">1章</a>と<a href="#sec-2">2章</a>だけ読めばOK</td></tr>
+      <tr><td>課題の中身を理解したい</td><td><a href="#sec-1">1章</a>〜<a href="#sec-3">3章</a></td></tr>
+      <tr><td>作り方を知りたい</td><td><a href="#sec-4">4章</a>（迷ったら<a href="#sec-8">用語集</a>へ）</td></tr>
+      <tr><td>これから開発を始める</td><td><a href="#sec-6">6章</a>と<a href="#sec-7">7章</a></td></tr>
+    </table>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">💡 点線つきの<span class="term" data-tip="こんなふうに、マウスを乗せるとやさしい解説が出ます。">専門用語</span>はマウスを乗せると解説が出ます。</div>
+  </div>
+</header>
+
+<!-- ==================== 1 ==================== -->
+<section id="sec-1">
+<h2>🔰 1. ひとことで言うと</h2>
+<p><b>「隣どうしで道具を取り合う人たちを、誰も固まらせず・誰も飢えさせずに回し続ける」</b>プログラムです。有名な「食事する哲学者」問題の発展版です。</p>
+<p>たとえで説明します。円卓に N人のコーダーが座っています。コンパイルするには、自分の左右にある<b>2本のドングル</b>が必要です。ドングルは隣の人と共有なので、取り合いになります。各コーダーは「コンパイル→デバッグ→リファクタリング」を繰り返します。そして、長い時間コンパイルできないでいると<b>燃え尽きて</b>しまいます（<span class="term" data-tip="一定時間コンパイルできなかったコーダーがリタイアすること。起きたら10ミリ秒以内に発表する。">burnout</span>）。コーダー1人を1つの<span class="term" data-tip="1つのプログラムの中で同時に動く作業の流れ。この課題ではコーダー1人=1スレッドで動かす。">スレッド</span>として動かし、C言語で実装します。</p>
+<p>難しいのは、次の3つを同時に満たすことです。</p>
+<ul class="plain">
+  <li>全員が譲り合って固まる<span class="term" data-tip="全員がお互いの持ち物を待ち合って、誰も動けなくなってしまう状態。">デッドロック</span>を起こさない</li>
+  <li>特定の人だけ永遠に待たされる<span class="term" data-tip="特定の人だけ順番を回してもらえず、永遠に待たされ続けること。">starvation</span>を起こさない</li>
+  <li>誰かが燃え尽きたら、<b>10ミリ秒以内</b>に検知して発表する</li>
+</ul>
+<div class="callout"><b>やらないこと</b>: ボーナス規定はありません。GUIや統計出力などの独自拡張もしません。そして<b>グローバル変数は禁止</b>です（使ったら不合格級の減点）。</div>
+</section>
+
+<!-- ==================== 2 ==================== -->
+<section id="sec-2">
+<h2>🗺 2. 全体の流れ</h2>
+<figure class="diagram">
+  <div class="d-flow">
+    <div class="d-step plain"><span class="d-num">入力</span>コマンドの8つの引数<span class="d-cap">人数・燃え尽きまでの時間・各作業の時間・回数・道具の休止時間・順番のルール</span></div>
+    <div class="d-arr">→</div>
+    <div class="d-step"><span class="d-num">STEP 1</span>チェックして準備<span class="d-cap">引数を検証し、ドングル・コーダー・スレッドを用意する</span></div>
+    <div class="d-arr">→</div>
+    <div class="d-step"><span class="d-num">STEP 2</span>全員が働き始める<span class="d-cap">各コーダー: 2本取る→コンパイル→返す→デバッグ→リファクタ、の繰り返し</span></div>
+    <div class="d-arr">→</div>
+    <div class="d-step"><span class="d-num">STEP 3</span>監視係が見回る<span class="d-cap">全員の「燃え尽きまでの残り時間」を約2ミリ秒間隔でチェック</span></div>
+    <div class="d-arr">→</div>
+    <div class="d-step"><span class="d-num">STEP 4</span>終わったら片付け<span class="d-cap">全員が規定回数コンパイル、または誰かの燃え尽きで終了。スレッドを合流させ、メモリを全部返す</span></div>
+    <div class="d-arr">→</div>
+    <div class="d-step plain"><span class="d-num">出力</span>動きのログ<span class="d-cap">「何ミリ秒に誰が何をしたか」。混ざらないよう1行ずつ順番に出力</span></div>
+  </div>
+  <figcaption>プログラムの流れ。STEP 2 のコーダーたちと STEP 3 の監視係は、別々のスレッドで同時に動く</figcaption>
+</figure>
+<p>ポイントは「<b>働く人と見張る人を分ける</b>」こと。コーダー本人に自分の燃え尽きを報告させると、道具待ちで眠っている間は報告できません。だから、見張り専門の監視係を別のスレッドにします。</p>
+</section>
+
+<!-- ==================== 3 ==================== -->
+<section id="sec-3">
+<h2>🎯 3. ゴール（完成の条件）</h2>
+<p>次がすべて満たせたら「完成」と言えます。チェックはこのブラウザに保存されるので、進捗管理に使えます。</p>
+<div class="dod-head">
+  <span class="dod-count" id="dod-count">0 / 6</span>
+  <div class="dod-progress"><div class="dod-bar" id="dod-bar"></div></div>
+</div>
+<ul class="dod">
+  <li><input type="checkbox" id="dodc-1"><label for="dodc-1">おかしな引数（マイナス・数字でない・知らないルール名）を、すべてきちんと断る</label></li>
+  <li><input type="checkbox" id="dodc-2"><label for="dodc-2">燃え尽きない条件なら、全員が規定回数コンパイルし、正しい形式・順序のログを出して終わる</label></li>
+  <li><input type="checkbox" id="dodc-3"><label for="dodc-3">燃え尽きる条件なら、実際の燃え尽き時刻から10ミリ秒以内に <code>burned out</code> を出力して止まる</label></li>
+  <li><input type="checkbox" id="dodc-4"><label for="dodc-4">順番のルール <code>fifo</code>（来た順）と <code>edf</code>（締切が近い人優先）の両方が動き、順番の管理に自作の<span class="term" data-tip="優先順位のいちばん高い人をすぐ取り出せる、待ち行列の作り方。この課題では配列で自作する。">優先度キュー</span>を使っている</label></li>
+  <li><input type="checkbox" id="dodc-5"><label for="dodc-5">メモリの返し忘れゼロ・データの取り合い事故（<span class="term" data-tip="2つのスレッドが同時に同じデータを触って、中身が壊れてしまうこと。">データ競合</span>）ゼロ（<span class="term" data-tip="メモリの返し忘れ（リーク）を見つけてくれる検査ツール。">valgrind</span> と <span class="term" data-tip="データ競合を見つけてくれる検査ツール。TSan とも呼ばれる。">ThreadSanitizer</span> という検査ツールで確認）</label></li>
+  <li><input type="checkbox" id="dodc-6"><label for="dodc-6">厳しめのコンパイル設定（<code>-Wall -Wextra -Werror -pthread</code>）で通り、コーディング規約チェック（<code>norminette</code>）もエラーなし</label></li>
+</ul>
+<div class="dod-note">チェック状態はこのブラウザ（localStorage）に保存されます。</div>
+</section>
+
+<!-- ==================== 4 ==================== -->
+<section id="sec-4">
+<h2>🧩 4. どう作る？</h2>
+<p>役割ごとにファイルを分けます。登場人物は7人です。</p>
+<ul class="plain">
+  <li><b>受付係</b>（parse.c）— 引数を1つずつチェックする</li>
+  <li><b>準備・片付け係</b>（init.c / cleanup.c）— 資源の確保と解放を担当する</li>
+  <li><b>コーダー</b>（coder.c）— 1人1スレッドで働くループ本体</li>
+  <li><b>ドングル</b>（dongle.c）— 鍵つきの共有道具</li>
+  <li><b>順番待ちの列</b>（heap.c）— 自作の優先度キュー</li>
+  <li><b>監視係</b>（monitor.c）— 燃え尽きチェック専門のスレッド</li>
+  <li><b>アナウンス係</b>（log.c）— ログが混ざらないように1行ずつ出す</li>
+</ul>
+
+<p>作り方の中心になるアイデアは4つです。</p>
+
+<div class="idea">
+  <div class="i-title">アイデア1: 鍵は1人しか持てない</div>
+  ドングル1本ごとに<span class="term" data-tip="1人しか持てない鍵。共有物を触るときは、まず鍵を取ってから触る。">mutex</span>（1人しか持てない鍵）を付けます。道具の状態を見るときも変えるときも、<b>必ず鍵を持ってから</b>。ログの出力にも専用の鍵を1つ用意して、行が混ざらないようにします。
+</div>
+<div class="idea">
+  <div class="i-title">アイデア2: 取る順番を全員で統一して、デッドロックを防ぐ</div>
+  全員が「<b>番号の小さいドングルから先に取る</b>」と決めます。これで「全員が左手に1本持って、右手の1本を待つ」ような<b>待ちの輪</b>が、そもそも作れなくなります。理屈で正しさを説明できる、シンプルな回避策です。
+</div>
+<div class="idea">
+  <div class="i-title">アイデア3: 順番待ちは自作の優先度キューで公平に</div>
+  ドングルごとに待ち行列を持ちます。<code>fifo</code> なら来た順。<code>edf</code> なら締切（最後にコンパイルを始めた時刻＋燃え尽きまでの時間）が近い人を優先します。同着だったときの順位も決めておき、結果がブレないようにします。待っている人は<span class="term" data-tip="「状況が変わったよ」と、待っている人を起こしてあげる仕組み。mutexとセットで使う。">条件変数</span>で眠り、道具が返ってきたら起こしてもらいます。
+</div>
+<div class="idea">
+  <div class="i-title">アイデア4: 監視係は2ミリ秒間隔の見回り</div>
+  専門のスレッドが、全員の締切を定期的にチェックします。超過を見つけたら停止の合図を立てて、すぐアナウンス。見回りの間隔が2ミリ秒なら、要求されている「10ミリ秒以内の報告」に余裕を持って間に合います。返した道具の休止時間（<span class="term" data-tip="道具を返してから、次にまた使えるようになるまでの待ち時間。">cooldown</span>）は「何時から使えるか」のメモで管理し、余計なスレッドは増やしません。
+</div>
+
+<div class="callout"><b>ちなみに</b>: 使える標準機能も指定リストのみです（pthread系・時刻取得・<code>usleep</code>・<code>printf</code> など）。既製の便利な待ち行列も使えないので、優先度キューは配列ベースで自作します。</div>
+</section>
+
+<!-- ==================== 5 ==================== -->
+<section id="sec-5">
+<h2>✅ 5. どう確かめる？</h2>
+<ul class="plain">
+  <li><b>両方の条件で動かす</b> — 燃え尽きない条件・燃え尽きる条件それぞれで実行し、ログの形式と順序を検証スクリプトでチェック（「コンパイル開始の直前に道具取得のログが2行ある」「時刻が逆行しない」など）</li>
+  <li><b>燃え尽きケースを100回繰り返す</b> — 報告の遅れが毎回10ミリ秒以内に収まっているかを集計する</li>
+  <li><b>ぎりぎりの条件で試す</b> — 時間に余裕のない設定や、道具の休止時間が長い設定で、成功すべきなら完走・無理なら正しく燃え尽きることを確認</li>
+  <li><b>おかしな引数を一通り試す</b> — 全部きちんと断られるかを確認</li>
+  <li><b>検査ツールを全テストにかける</b> — valgrind（メモリの返し忘れ検出）と ThreadSanitizer（データの取り合い事故検出）で、どちらもゼロを確認</li>
+</ul>
+</section>
+
+<!-- ==================== 6 ==================== -->
+<section id="sec-6">
+<h2>🛠 6. 作る順番</h2>
+<ol class="steps">
+  <li><b>まず取り合いの核心だけ</b> — 順番ルールなし・監視なしで、「番号順に取る」デッドロック回避が動く最小版を作る</li>
+  <li><b>全部の仕様を入れる</b> — 道具の休止時間・自作の待ち行列・<code>edf</code>・監視係・引数チェック・ログの整合を仕上げる</li>
+  <li><b>仕上げ</b> — 10ミリ秒精度の追い込み、検査ツールでの掃討、コーディング規約の整形</li>
+</ol>
+</section>
+
+<!-- ==================== 7 ==================== -->
+<section id="sec-7">
+<h2>⚠️ 7. つまずきやすいポイント</h2>
+<ul class="plain">
+  <li><b>タイミング次第でしか起きないバグ</b> — 再現しないのが最大の敵。検査ツールを常にかけながら、人数多め・時間短めの過酷な設定で繰り返しテストします</li>
+  <li><b>報告が10ミリ秒に間に合わない</b> — 見回りの間隔を短くする、ログ出力を軽い方式に切り替える、などの対策を用意しておきます</li>
+  <li><b>コーディング規約で構造が崩れる</b> — <span class="term" data-tip="42のコーディング規約。関数は25行以内、などの書き方の決まり。norminette というツールでチェックし、エラー1つで0点になる。">Norm</span>（関数25行以内など）に後から合わせると大工事になります。最初から小さい関数に分けて書き、規約チェックをこまめに回します</li>
+</ul>
+</section>
+
+<!-- ==================== 8 ==================== -->
+<section id="sec-8">
+<h2>📖 8. 用語集</h2>
+<dl class="glossary">
+  <dt>スレッド</dt><dd>1つのプログラムの中で同時に動く作業の流れ。この課題ではコーダー1人=1スレッドで動かす。</dd>
+  <dt>mutex（ミューテックス）</dt><dd>1人しか持てない鍵。共有物を触るときは、まず鍵を取ってから触る。</dd>
+  <dt>条件変数</dt><dd>「状況が変わったよ」と、待っている人を起こしてあげる仕組み。mutexとセットで使う。</dd>
+  <dt>デッドロック</dt><dd>全員がお互いの持ち物を待ち合って、誰も動けなくなってしまう状態。</dd>
+  <dt>starvation（飢餓）</dt><dd>特定の人だけ順番を回してもらえず、永遠に待たされ続けること。</dd>
+  <dt>FIFO（来た順）</dt><dd>先に並んだ人から順番が回ってくるルール。</dd>
+  <dt>EDF（締切が近い順）</dt><dd>締切が近い人を優先するルール。この課題では「燃え尽きるのが早そうな人」から先に道具を渡す。</dd>
+  <dt>優先度キュー（ヒープ）</dt><dd>優先順位のいちばん高い人をすぐ取り出せる、待ち行列の作り方。この課題では配列で自作する。</dd>
+  <dt>cooldown（休止時間）</dt><dd>道具を返してから、次にまた使えるようになるまでの待ち時間。</dd>
+  <dt>burnout（燃え尽き）</dt><dd>一定時間コンパイルできなかったコーダーがリタイアすること。起きたら10ミリ秒以内に発表する。</dd>
+  <dt>データ競合</dt><dd>2つのスレッドが同時に同じデータを触って、中身が壊れてしまうこと。</dd>
+  <dt>valgrind</dt><dd>メモリの返し忘れ（リーク）を見つけてくれる検査ツール。</dd>
+  <dt>ThreadSanitizer</dt><dd>データ競合を見つけてくれる検査ツール。TSan とも呼ばれる。</dd>
+  <dt>Norm</dt><dd>42のコーディング規約。関数は25行以内、などの書き方の決まり。norminette というツールでチェックし、エラー1つで0点になる。</dd>
+</dl>
+</section>
+
+<footer>これは初学者向けに書き直した版です。要件ID・アルゴリズム詳細・テスト表を含む詳細版は、同じフォルダの <code>design.md</code> を参照してください。</footer>
+</main>
+</div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+(function(){
+  var KEY='codexion-design';
+
+  /* テーマ切替 */
+  var saved=localStorage.getItem(KEY+':theme');
+  if(saved){document.documentElement.dataset.theme=saved;}
+  document.getElementById('theme-toggle').addEventListener('click',function(){
+    var cur=document.documentElement.dataset.theme||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var next=(cur==='dark')?'light':'dark';
+    document.documentElement.dataset.theme=next;
+    localStorage.setItem(KEY+':theme',next);
+  });
+
+  /* ゴールのチェックリスト（進捗保存） */
+  var boxes=Array.prototype.slice.call(document.querySelectorAll('ul.dod input[type=checkbox]'));
+  var state=[];
+  try{state=JSON.parse(localStorage.getItem(KEY+':dod')||'[]');}catch(e){}
+  boxes.forEach(function(b,i){
+    b.checked=!!state[i];
+    b.addEventListener('change',update);
+  });
+  function update(){
+    var s=boxes.map(function(b){return b.checked;});
+    localStorage.setItem(KEY+':dod',JSON.stringify(s));
+    var done=s.filter(Boolean).length;
+    document.getElementById('dod-count').textContent=done+' / '+boxes.length;
+    document.getElementById('dod-bar').style.width=(boxes.length?done/boxes.length*100:0)+'%';
+    boxes.forEach(function(b){b.closest('li').classList.toggle('done',b.checked);});
+  }
+  update();
+
+  /* 目次スクロール連動 */
+  var tocLinks=Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var byId={};
+  tocLinks.forEach(function(a){byId[a.getAttribute('href').slice(1)]=a;});
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        tocLinks.forEach(function(a){a.classList.remove('active');});
+        var a=byId[en.target.id];
+        if(a){a.classList.add('active');}
+      }
+    });
+  },{rootMargin:'-8% 0px -78% 0px'});
+  Array.prototype.slice.call(document.querySelectorAll('main section[id]')).forEach(function(t){obs.observe(t);});
+
+  /* 用語のホバー解説 */
+  var tip=document.getElementById('tip');
+  Array.prototype.slice.call(document.querySelectorAll('.term')).forEach(function(el){
+    el.addEventListener('mouseenter',function(){
+      if(!el.dataset.tip){return;}
+      tip.textContent=el.dataset.tip;
+      tip.style.display='block';
+      var r=el.getBoundingClientRect();
+      var left=Math.min(r.left,window.innerWidth-360);
+      tip.style.left=Math.max(8,left)+'px';
+      tip.style.top=(r.bottom+7+window.scrollY)+'px';
+    });
+    el.addEventListener('mouseleave',function(){tip.style.display='none';});
+  });
+})();
+</script>
+</body>
+</html>
