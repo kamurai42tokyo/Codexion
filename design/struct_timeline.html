@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>構造体の時系列: Codexion</title>
+<style>
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --fg:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#c2410c; --accent-soft:#ffedd5;
+  --code-bg:#f1f5f9;
+  --check:#1d4ed8; --check-soft:#dbeafe;
+  --lock:#6d28d9;  --lock-soft:#ede9fe;
+  --wait:#64748b;  --wait-soft:#e2e8f0;
+  --ng:#b91c1c;    --ng-soft:#fee2e2;
+  --ok:#15803d;    --ok-soft:#dcfce7;
+  --shadow:0 1px 3px rgba(15,23,42,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+    --code-bg:#0b1220;
+    --check:#93c5fd; --check-soft:#1e3a8a;
+    --lock:#c4b5fd;  --lock-soft:#4c1d95;
+    --wait:#94a3b8;  --wait-soft:#334155;
+    --ng:#fca5a5;    --ng-soft:#7f1d1d;
+    --ok:#86efac;    --ok-soft:#14532d;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+  --code-bg:#0b1220;
+  --check:#93c5fd; --check-soft:#1e3a8a;
+  --lock:#c4b5fd;  --lock-soft:#4c1d95;
+  --wait:#94a3b8;  --wait-soft:#334155;
+  --ng:#fca5a5;    --ng-soft:#7f1d1d;
+  --ok:#86efac;    --ok-soft:#14532d;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.85;font-size:15.5px}
+main{max-width:1000px;margin:0 auto;padding:28px 16px 90px}
+h1{font-size:25px;margin:0 0 4px}
+h1 .accent{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted)}
+section{margin-top:44px}
+h2{font-size:20px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+h2 .no{color:var(--accent);margin-right:8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin:12px 0}
+.toc{font-size:14px}
+.toc ol{margin:6px 0 0;padding-left:22px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.theme-btn{position:fixed;top:12px;right:12px;font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;z-index:2}
+.note{font-size:13.5px;color:var(--muted)}
+.point{border-left:4px solid var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0}
+.scroll{overflow-x:auto}
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:4px}
+
+/* ---- legend ---- */
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin:2px 0 10px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:2px solid}
+.lg-create::before{background:var(--ok-soft);border-color:var(--ok)!important}
+.lg-update::before{background:var(--accent-soft);border-color:var(--accent)!important}
+.lg-read::before{background:var(--check-soft);border-color:var(--check)!important}
+.lg-lock::before{background:var(--lock-soft);border-color:var(--lock)!important}
+.lg-destroy::before{background:var(--ng-soft);border-color:var(--ng)!important}
+
+/* ---- fig1 grid ---- */
+.grid{display:grid;grid-template-columns:96px repeat(5,minmax(150px,1fr));gap:6px;min-width:880px}
+.gh{font-size:13px;font-weight:700;padding:6px 8px;border-radius:8px;background:var(--code-bg);text-align:center;line-height:1.4}
+.gh small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.gl{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:700;padding:8px 4px;display:flex;align-items:center}
+.gc{border:2px solid var(--border);border-radius:8px;padding:6px 8px;font-size:12.5px;line-height:1.5;cursor:pointer;background:var(--panel);text-align:left;font-family:inherit;color:inherit}
+.gc.empty{cursor:default;border-style:dashed;opacity:.45;background:transparent}
+.gc .k{display:block;font-weight:700;font-size:12px}
+.gc.create{background:var(--ok-soft);border-color:var(--ok)}
+.gc.update{background:var(--accent-soft);border-color:var(--accent)}
+.gc.read{background:var(--check-soft);border-color:var(--check)}
+.gc.destroy{background:var(--ng-soft);border-color:var(--ng)}
+.gc.sel{outline:3px solid var(--fg);outline-offset:1px}
+.thread-row{display:grid;grid-template-columns:96px repeat(5,minmax(150px,1fr));gap:6px;min-width:880px;margin-top:6px}
+.thread-row .t{font-size:12px;color:var(--muted);padding:4px 8px;border-top:2px solid var(--border)}
+.msg{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--code-bg);border:1px solid var(--border);min-height:3.6em}
+.msg b{font-family:ui-monospace,Menlo,monospace}
+.msg ul{margin:4px 0 0;padding-left:20px}
+
+/* ---- fig2 timeline ---- */
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--fg);font-family:inherit}
+.tl-lane-bg{fill:var(--code-bg)}
+.tl-cur{fill:var(--accent-soft);opacity:.6}
+.tl-head{font-size:12px}
+.tl-head.future{opacity:.35}
+.tl-lane-label{font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.cell rect{stroke-width:2}
+.cell .t1{font-size:12.5px;font-weight:700}
+.cell .t2{font-size:11px}
+.k-create rect{fill:var(--ok-soft);stroke:var(--ok)}
+.k-update rect{fill:var(--accent-soft);stroke:var(--accent)}
+.k-read rect{fill:var(--check-soft);stroke:var(--check)}
+.k-destroy rect{fill:var(--ng-soft);stroke:var(--ng)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.counter{font-size:13px;color:var(--muted);margin-left:auto}
+.vals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+@media (max-width:720px){.vals{grid-template-columns:1fr}}
+.vbox{border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--code-bg)}
+.vbox h4{margin:0 0 4px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.vbox table{border-collapse:collapse;width:100%;font-size:12.5px}
+.vbox td{padding:1px 4px;font-family:ui-monospace,Menlo,monospace}
+.vbox td:first-child{color:var(--muted)}
+.vbox tr.chg td{background:var(--accent-soft);font-weight:700}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-top:10px;min-height:2.2em;white-space:pre-wrap}
+.log .new{color:var(--accent);font-weight:700}
+.msg2{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--code-bg);border:1px solid var(--border);min-height:3.6em}
+table.t{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+table.t th,table.t td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg)}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" type="button">テーマ切替</button>
+<main>
+  <header>
+    <h1>構造体の<span class="accent">作成と更新</span>の時系列</h1>
+    <div class="meta">Codexion 用メモ ･ t_config / t_table / t_corder / t_dongle / t_request がいつ作られ、いつ書き換わるか</div>
+  </header>
+
+  <div class="card toc">
+    <b>この資料の流れ</b>
+    <ol>
+      <li><a href="#f1">全体の時系列：プログラムの始まりから終わりまで</a></li>
+      <li><a href="#f2">実行中の1サイクル：corder 1人が1周する間の変化</a></li>
+    </ol>
+    <p class="note" style="margin-bottom:0">run_simulation と monitor_routine の中身は、まだ書かれていない。この資料の実行中の流れは、課題文とこれまでの相談内容から組み立てた予定である。</p>
+  </div>
+
+  <!-- ================= 1 ================= -->
+  <section id="f1">
+    <h2><span class="no">1</span>全体の時系列</h2>
+    <p>横軸は、プログラムの段階を左から右へ並べたものである。縦の段は構造体を表す。マスをクリックすると、そのマスで動く関数とメンバが下に出る。</p>
+    <div class="card">
+      <div class="legend"><span class="lg-create">作成</span><span class="lg-update">更新</span><span class="lg-read">読み取りだけ</span><span class="lg-destroy">破棄</span></div>
+      <div class="scroll">
+        <div class="grid" id="g1"></div>
+        <div class="thread-row" id="g1t"></div>
+      </div>
+      <div class="msg" id="g1msg">マスをクリックすると、そのマスの詳しい説明がここに出る。</div>
+    </div>
+    <div class="point">段階1から段階3の途中までは、main スレッドしか動いていない。そのため、この区間の作成と初期化には mutex が要らない。段階3で pthread_create を呼んだ瞬間から、構造体は複数のスレッドに共有されるので、書き換わる値は mutex で守る必要がある。</div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="f2">
+    <h2><span class="no">2</span>実行中の1サイクル</h2>
+    <p>この図は、段階4「実行中」の1サイクルを拡大したものである。corder 1 の左のドングルは <code>dongle[0]</code>、右のドングルは <code>dongle[1]</code> とする。</p>
+    <p class="note">例の設定：time_to_burnout = 800、time_to_compile = 200、time_to_debug = 200、time_to_refactor = 200、dongle_cooldown = 50、scheduler = fifo。corder 1 は 1周目を終えて、時刻 600 ms から2周目を始めるところとする。</p>
+    <div class="card">
+      <div class="legend"><span class="lg-create">作成</span><span class="lg-update">更新</span><span class="lg-read">読み取りだけ</span><span class="lg-destroy">取り除く</span></div>
+      <div class="scroll"><svg id="t2svg"></svg></div>
+      <div class="vals" id="t2vals"></div>
+      <div class="log" id="t2log"></div>
+      <div class="msg2" id="t2msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="t2prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="t2next" type="button">次へ ▶</button>
+        <button class="btn" id="t2reset" type="button">最初から</button>
+        <span class="counter" id="t2count"></span>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>メンバ</th><th>書き換えるスレッド</th><th>書き換える時点</th><th>守る鍵</th></tr></thead>
+        <tbody>
+          <tr><td><code>t_corder.last_compile_start</code></td><td>その corder のスレッド</td><td>コンパイルを始めた瞬間</td><td>未定 <span class="badge">要検討</span></td></tr>
+          <tr><td><code>t_corder.compile_count</code></td><td>その corder のスレッド</td><td>コンパイルを終えた瞬間</td><td>未定 <span class="badge">要検討</span></td></tr>
+          <tr><td><code>t_dongle</code> の全メンバ</td><td>左右の corder のスレッド</td><td>申込・受け取り・返却のとき</td><td>そのドングルの <code>mutex</code></td></tr>
+          <tr><td><code>t_request</code></td><td>左右の corder のスレッド</td><td>申込（追加）と受け取り（取り除く）のとき</td><td>そのドングルの <code>mutex</code></td></tr>
+          <tr><td><code>t_table.stop</code></td><td>monitor スレッド</td><td>燃え尽き、または全員完了を見つけたとき</td><td><code>stop_mutex</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">compile_count を「コンパイルを始めた瞬間」に増やす設計もありうる。この資料では、課題文の「compiled at least this many times」を「コンパイルを終えた回数」と読んで、終えた瞬間に増やしている。</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent, text){
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  $('themeBtn').addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  /* ================= fig1 ================= */
+  var PHASES = [
+    {t: '1. 起動', s: 'main'},
+    {t: '2. 準備', s: 'run_simulations'},
+    {t: '3. スレッド開始', s: 'run_simulations'},
+    {t: '4. 実行中', s: 'corder × N / monitor'},
+    {t: '5. 終了', s: 'run_simulations → main'}
+  ];
+  var THREADS = ['main スレッドだけ', 'main スレッドだけ', 'main スレッドが他のスレッドを作る', 'corder スレッド N 本と monitor スレッド', 'main スレッド（全員の join 後）'];
+  var LANES = ['t_config', 't_table', 't_corder', 't_dongle', 't_request'];
+  var C = {
+    t_config: [
+      {k: 'create', s: '作成', b: 'set_data が malloc して引数を書く',
+        d: ['main の set_data が、t_config を malloc で1個作る。', 'set_data は、引数8つを数値や文字列に変換して、t_config の各メンバに書き込む。', 'scheduler の文字列も、このとき別に malloc される。']},
+      {k: 'read', s: 'コピー', b: 't_table.config にコピーされる',
+        d: ['run_simulations は、main から受け取った t_config の中身を、t_table の config にコピーする。', 'この時点から先、各スレッドは t_table.config の方を読む。']},
+      null,
+      {k: 'read', s: '読み取りだけ', b: '全スレッドが読む',
+        d: ['corder スレッドは、time_to_compile などの時間を読む。', 'monitor スレッドは、time_to_burnout と number_of_compiles_required を読む。', '誰も書き換えないので、mutex は要らない。']},
+      {k: 'destroy', s: '破棄', b: 'main が scheduler と本体を free',
+        d: ['run_simulations が戻った後、main が free_all で scheduler の文字列と t_config 本体を free する。', 't_table.config はコピーなので、t_table と一緒に消える。']}
+    ],
+    t_table: [
+      null,
+      {k: 'create', s: '作成', b: 'stop = false、stop_mutex を init',
+        d: ['run_simulations が、t_table を1個用意する。', 'config に設定をコピーし、<b>stop</b> を false にする。', '<b>pthread_mutex_init</b> で stop_mutex を初期化する。', 'corders と dongle には、後で作る2つの配列の住所を入れる。']},
+      {k: 'read', s: '住所を配る', b: 'monitor に t_table の住所を渡す',
+        d: ['run_simulations は、monitor スレッドを作るとき、pthread_create の第4引数に t_table の住所を渡す。', 'corder スレッドは、t_corder の table を通じて同じ t_table に辿り着く。']},
+      {k: 'update', s: '更新', b: 'stop を読む／monitor が true を書く',
+        d: ['各 corder スレッドは、ループのたびに is_stopped で <b>stop</b> を読む。', 'monitor スレッドは、燃え尽きた corder を見つけたとき、または全員が回数を満たしたときに、set_stop で <b>stop</b> を true にする。', 'どちらの読み書きも、stop_mutex を取ってから行う。']},
+      {k: 'destroy', s: '破棄', b: 'stop_mutex を destroy',
+        d: ['全スレッドの join が終わった後、run_simulations が <b>pthread_mutex_destroy</b> で stop_mutex を破棄する。', 't_table 自体がローカル変数なら、run_simulations が戻ると t_table も消える。']}
+    ],
+    t_corder: [
+      null,
+      {k: 'create', s: '作成', b: 'set_corders が N 個 malloc',
+        d: ['set_corders が、t_corder の配列を number_of_coders 個分 malloc する。', 'i 番目の t_corder には、<b>id</b> = i + 1、<b>last_compile_start</b> = 0、<b>compile_count</b> = 0 を書く。', '<b>table</b> には t_table の住所、<b>left</b> には dongle[i] の住所、<b>right</b> には dongle[(i + 1) % N] の住所を書く。', 'corder が1人だけのときは、left と right が同じ dongle[0] を指す。']},
+      {k: 'read', s: '住所を配る', b: '&corders[i] をスレッドに渡す',
+        d: ['run_simulations は、i 番目の corder スレッドを作るとき、pthread_create の第4引数に &corders[i] を渡す。']},
+      {k: 'update', s: '更新', b: '本人が書き、monitor が読む',
+        d: ['corder のスレッドは、コンパイルを始めた瞬間に <b>last_compile_start</b> を現在時刻にする。', '同じスレッドは、コンパイルを終えた瞬間に <b>compile_count</b> を1増やす。', 'monitor スレッドは、この2つを読んで、燃え尽きと全員完了を判定する。', '書くスレッドと読むスレッドが別なので、守る鍵が必要になる（まだ未定）。']},
+      {k: 'destroy', s: '破棄', b: '配列を free',
+        d: ['全スレッドの join が終わった後、run_simulations が t_corder の配列を free する。']}
+    ],
+    t_dongle: [
+      null,
+      {k: 'create', s: '作成', b: 'N 本 malloc、mutex と cond を init',
+        d: ['run_simulations が、t_dongle の配列を number_of_coders 本分 malloc する。', '各ドングルの <b>in_use</b> を false、<b>queue_size</b> と <b>next_seq</b> を 0 にする。', '<b>released_at</b> は、最初の受け取りでクールダウンに引っかからない値にする（決め方は未定）。', '<b>pthread_mutex_init</b> と <b>pthread_cond_init</b> で、mutex と cond を初期化する。']},
+      null,
+      {k: 'update', s: '更新', b: '申込・受け取り・返却で変わる',
+        d: ['申込：corder が queue に申込書を入れ、<b>queue_size</b> と <b>next_seq</b> を1増やす。', '受け取り：番が来た corder が <b>in_use</b> を true にし、自分の申込書を queue から取り除く。', '返却：corder が <b>in_use</b> を false、<b>released_at</b> を現在時刻にして、cond で待つ corder を起こす。', 'どの操作も、そのドングルの mutex を取ってから行う。']},
+      {k: 'destroy', s: '破棄', b: 'broadcast → destroy → free',
+        d: ['stop が true になったら、全ドングルの cond を <b>pthread_cond_broadcast</b> で起こす。眠っている corder も stop に気づけるようにするためである。', '全スレッドの join が終わった後、<b>pthread_mutex_destroy</b> と <b>pthread_cond_destroy</b> で破棄する。', '最後に、t_dongle の配列を free する。']}
+    ],
+    t_request: [
+      null,
+      {k: 'create', s: '枠だけできる', b: 't_dongle と一緒に 2 枠',
+        d: ['t_request は t_dongle の queue[2] に埋め込まれているので、t_dongle の配列を malloc した時点で、ドングル1本につき2枠ができる。', 'この時点では queue_size が 0 なので、2枠とも中身は使われていない。']},
+      null,
+      {k: 'update', s: '追加と取り除き', b: '申込で入り、受け取りで出る',
+        d: ['corder が申込をすると、queue に申込書が1枚入る。<b>id</b> は自分の番号、<b>deadline</b> は last_compile_start + time_to_burnout、<b>seq</b> はドングルの next_seq である。', 'corder がドングルを受け取ると、その corder の申込書は queue から取り除かれる。']},
+      {k: 'destroy', s: '消える', b: 't_dongle と一緒に消える',
+        d: ['t_request は t_dongle の中にあるので、t_dongle の配列を free すると一緒に消える。']}
+    ]
+  };
+
+  (function(){
+    var g = $('g1'), sel = null;
+    var corner = document.createElement('div'); g.appendChild(corner);
+    PHASES.forEach(function(p){
+      var h = document.createElement('div'); h.className = 'gh';
+      h.innerHTML = esc(p.t) + '<small>' + esc(p.s) + '</small>';
+      g.appendChild(h);
+    });
+    LANES.forEach(function(lane){
+      var l = document.createElement('div'); l.className = 'gl'; l.textContent = lane; g.appendChild(l);
+      C[lane].forEach(function(c, i){
+        if (!c){
+          var e = document.createElement('div'); e.className = 'gc empty'; e.textContent = '—'; g.appendChild(e);
+          return;
+        }
+        var b = document.createElement('button'); b.type = 'button';
+        b.className = 'gc ' + c.k;
+        b.innerHTML = '<span class="k">' + esc(c.s) + '</span>' + esc(c.b);
+        b.addEventListener('click', function(){
+          if (sel) sel.classList.remove('sel');
+          sel = b; b.classList.add('sel');
+          $('g1msg').innerHTML = '<b>' + esc(lane) + '</b> ／ ' + esc(PHASES[i].t) + '<ul>' +
+            c.d.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>';
+        });
+        g.appendChild(b);
+      });
+    });
+    var tr = $('g1t');
+    var lbl = document.createElement('div'); lbl.className = 't'; lbl.textContent = '動くスレッド'; tr.appendChild(lbl);
+    THREADS.forEach(function(t){ var d = document.createElement('div'); d.className = 't'; d.textContent = t; tr.appendChild(d); });
+  })();
+
+  /* ================= fig2 ================= */
+  var L2 = [
+    {key: 'T', name: 't_table'},
+    {key: 'C', name: 't_corder 1'},
+    {key: 'R', name: 't_request'},
+    {key: 'D0', name: 'dongle[0]'},
+    {key: 'D1', name: 'dongle[1]'}
+  ];
+  function V(o){ return o; }
+  var base = {
+    c: {last_compile_start: '0', compile_count: '1'},
+    d0: {in_use: 'false', released_at: '200', queue_size: '0', next_seq: '3'},
+    d1: {in_use: 'false', released_at: '200', queue_size: '0', next_seq: '5'}
+  };
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  var STEPS = [];
+  (function(){
+    var s = clone(base);
+    STEPS.push({time: '600', cells: {}, v: clone(s), chg: [], log: [],
+      msg: '初期状態では、時刻は 600 ms である。corder 1 は 0 ms にコンパイルを始め、1回分のコンパイルを終えている。2本のドングルは、どちらも 200 ms に返されて空いている。'});
+    STEPS.push({time: '600', cells: {T: {k: 'read', t: 'is_stopped', n: 'false → 続ける'}}, v: clone(s), chg: [], log: [],
+      msg: 'corder 1 のスレッドは、ループの先頭で is_stopped を呼び、t_table の stop を読む。stop は false なので、corder 1 は2周目に進む。'});
+    s.d0.queue_size = '1'; s.d0.next_seq = '4';
+    STEPS.push({time: '600', cells: {R: {k: 'create', t: '申込書を追加', n: 'id1 / 800 / seq3'}, D0: {k: 'update', t: '申込を受付', n: 'queue_size 0→1'}, C: {k: 'read', t: '期限を計算', n: '0 + 800 = 800'}},
+      v: clone(s), chg: ['d0.queue_size', 'd0.next_seq'], log: [],
+      msg: 'corder 1 は dongle[0] の mutex を取り、申込書を queue に入れる。申込書の deadline は、last_compile_start（0）+ time_to_burnout（800）で 800 になる。seq には dongle[0] の next_seq（3）が入り、next_seq は 4 に進む。'});
+    s.d0.in_use = 'true'; s.d0.queue_size = '0';
+    STEPS.push({time: '600', cells: {R: {k: 'destroy', t: '申込書を除く', n: '受け取ったので'}, D0: {k: 'update', t: '受け取り', n: 'in_use → true'}},
+      v: clone(s), chg: ['d0.in_use', 'd0.queue_size'], log: ['600 1 has taken a dongle'],
+      msg: 'dongle[0] について、3つの条件がそろう。queue の先頭が corder 1 の申込書であり、in_use が false であり、600 − 200 = 400 ms が dongle_cooldown（50 ms）以上である。そこで corder 1 は in_use を true にし、自分の申込書を queue から取り除いて、ドングルを受け取る。'});
+    s.d1.in_use = 'true'; s.d1.next_seq = '6';
+    STEPS.push({time: '600', cells: {R: {k: 'update', t: '追加 → 除く', n: 'dongle[1] でも同じ'}, D1: {k: 'update', t: '申込 → 受け取り', n: 'in_use → true'}},
+      v: clone(s), chg: ['d1.in_use', 'd1.next_seq'], log: ['600 1 has taken a dongle'],
+      msg: 'corder 1 は、右の dongle[1] についても同じ手順で申込と受け取りを行う。dongle[1] の queue_size は、1 に増えた後すぐ 0 に戻る。これで corder 1 は2本のドングルを持つ。'});
+    s.c.last_compile_start = '600';
+    STEPS.push({time: '600', cells: {C: {k: 'update', t: 'コンパイル開始', n: '開始時刻 = 600'}},
+      v: clone(s), chg: ['c.last_compile_start'], log: ['600 1 is compiling'],
+      msg: 'corder 1 は、コンパイルを始めた瞬間に last_compile_start を 600 にする。この瞬間から、corder 1 の燃え尽き期限は 600 + 800 = 1400 ms に延びる。'});
+    STEPS.push({time: '700', cells: {C: {k: 'read', t: 'monitor が読む', n: '700 − 600 < 800'}},
+      v: clone(s), chg: [], log: [],
+      msg: 'コンパイルの最中に、monitor スレッドが corder 1 の last_compile_start を読む。現在時刻 700 から 600 を引くと 100 で、time_to_burnout（800）より小さいので、monitor は「燃え尽きていない」と判定する。'});
+    s.c.compile_count = '2';
+    STEPS.push({time: '800', cells: {C: {k: 'update', t: 'コンパイル終了', n: 'count 1 → 2'}},
+      v: clone(s), chg: ['c.compile_count'], log: [],
+      msg: 'time_to_compile（200 ms）が経ち、時刻は 800 ms になる。corder 1 は compile_count を 2 に増やす。'});
+    s.d0.in_use = 'false'; s.d0.released_at = '800'; s.d1.in_use = 'false'; s.d1.released_at = '800';
+    STEPS.push({time: '800', cells: {D0: {k: 'update', t: '返却', n: 'released_at = 800'}, D1: {k: 'update', t: '返却', n: 'released_at = 800'}},
+      v: clone(s), chg: ['d0.in_use', 'd0.released_at', 'd1.in_use', 'd1.released_at'], log: ['800 1 is debugging'],
+      msg: 'corder 1 は、2本のドングルについて、それぞれの mutex を取って in_use を false、released_at を 800 にする。さらに cond で、待っている隣の corder を起こす。2本のドングルは、850 ms まではクールダウン中で誰にも渡せない。'});
+    STEPS.push({time: '1000', cells: {},
+      v: clone(s), chg: [], log: ['1000 1 is refactoring'],
+      msg: 'デバッグ（200 ms）が終わり、corder 1 はリファクタを始める。デバッグとリファクタの間、corder 1 はどの構造体も書き換えない。'});
+    STEPS.push({time: '1200', cells: {T: {k: 'read', t: 'is_stopped', n: 'false → 3周目へ'}},
+      v: clone(s), chg: [], log: [],
+      msg: 'リファクタ（200 ms）が終わり、時刻は 1200 ms になる。corder 1 は再び is_stopped で stop を読み、すぐに次の申込へ進む。3周目の申込書の deadline は、600 + 800 = 1400 になる。'});
+  })();
+
+  (function(){
+    var step = 0, last = STEPS.length - 1, svg = $('t2svg');
+    var LW = 100, CW = 116, LH = 58, TOP = 32;
+    var W = LW + last * CW + 8, H = TOP + L2.length * LH + 6;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.style.minWidth = Math.min(W, 680) + 'px';
+
+    function vbox(title, obj, prefix, chg){
+      var h = '<div class="vbox"><h4>' + esc(title) + '</h4><table>';
+      Object.keys(obj).forEach(function(k){
+        h += '<tr' + (chg.indexOf(prefix + '.' + k) >= 0 ? ' class="chg"' : '') + '><td>' + esc(k) + '</td><td>' + esc(obj[k]) + '</td></tr>';
+      });
+      return h + '</table></div>';
+    }
+    function render(){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (step > 0) el('rect', {x: LW + (step - 1) * CW, y: 0, width: CW, height: H, rx: 8, 'class': 'tl-cur'}, svg);
+      for (var c = 1; c <= last; c++){
+        el('text', {x: LW + (c - 1) * CW + CW / 2, y: 20, 'text-anchor': 'middle', 'class': 'tl-head' + (c > step ? ' future' : '')}, svg, STEPS[c].time + ' ms');
+      }
+      L2.forEach(function(lane, li){
+        var y = TOP + li * LH;
+        el('rect', {x: 0, y: y + 4, width: W, height: LH - 8, rx: 8, 'class': 'tl-lane-bg'}, svg);
+        el('text', {x: 10, y: y + LH / 2 + 5, 'class': 'tl-lane-label'}, svg, lane.name);
+        for (var c = 1; c <= step; c++){
+          var cell = STEPS[c].cells[lane.key];
+          if (!cell) continue;
+          var x = LW + (c - 1) * CW;
+          var g = el('g', {'class': 'cell k-' + cell.k}, svg);
+          el('rect', {x: x + 5, y: y + 8, width: CW - 10, height: LH - 16, rx: 8}, g);
+          el('text', {x: x + CW / 2, y: y + 26, 'text-anchor': 'middle', 'class': 't1'}, g, cell.t);
+          if (cell.n) el('text', {x: x + CW / 2, y: y + 41, 'text-anchor': 'middle', 'class': 't2'}, g, cell.n);
+        }
+      });
+      var st = STEPS[step];
+      $('t2vals').innerHTML = vbox('t_corder 1', st.v.c, 'c', st.chg) + vbox('dongle[0]（左）', st.v.d0, 'd0', st.chg) + vbox('dongle[1]（右）', st.v.d1, 'd1', st.chg);
+      var lines = [];
+      for (var i = 1; i <= step; i++) STEPS[i].log.forEach(function(l){ lines.push({l: l, cur: i === step}); });
+      $('t2log').innerHTML = lines.length ? lines.map(function(o){ return o.cur ? '<span class="new">' + esc(o.l) + '</span>' : esc(o.l); }).join('\n') : '<span class="note">（ログはまだない）</span>';
+      $('t2msg').textContent = st.msg;
+      $('t2prev').disabled = step === 0;
+      $('t2next').disabled = step === last;
+      $('t2count').textContent = step + ' / ' + last;
+    }
+    $('t2prev').addEventListener('click', function(){ if (step > 0){ step--; render(); } });
+    $('t2next').addEventListener('click', function(){ if (step < last){ step++; render(); } });
+    $('t2reset').addEventListener('click', function(){ step = 0; render(); });
+    render();
+  })();
+})();
+</script>
+</body>
+</html>

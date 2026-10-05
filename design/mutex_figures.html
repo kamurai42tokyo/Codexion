@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mutex 図解: Codexion</title>
+<style>
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --fg:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#c2410c; --accent-soft:#ffedd5;
+  --code-bg:#f1f5f9;
+  --check:#1d4ed8; --check-soft:#dbeafe;
+  --lock:#6d28d9;  --lock-soft:#ede9fe;
+  --wait:#64748b;  --wait-soft:#e2e8f0;
+  --ng:#b91c1c;    --ng-soft:#fee2e2;
+  --ok:#15803d;    --ok-soft:#dcfce7;
+  --shadow:0 1px 3px rgba(15,23,42,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+    --code-bg:#0b1220;
+    --check:#93c5fd; --check-soft:#1e3a8a;
+    --lock:#c4b5fd;  --lock-soft:#4c1d95;
+    --wait:#94a3b8;  --wait-soft:#334155;
+    --ng:#fca5a5;    --ng-soft:#7f1d1d;
+    --ok:#86efac;    --ok-soft:#14532d;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+  --code-bg:#0b1220;
+  --check:#93c5fd; --check-soft:#1e3a8a;
+  --lock:#c4b5fd;  --lock-soft:#4c1d95;
+  --wait:#94a3b8;  --wait-soft:#334155;
+  --ng:#fca5a5;    --ng-soft:#7f1d1d;
+  --ok:#86efac;    --ok-soft:#14532d;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.85;font-size:15.5px}
+main{max-width:920px;margin:0 auto;padding:28px 16px 90px}
+h1{font-size:25px;margin:0 0 4px}
+h1 .accent{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted)}
+section{margin-top:44px}
+h2{font-size:20px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+h2 .no{color:var(--accent);margin-right:8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;overflow-x:auto;font-size:13.5px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin:12px 0}
+.toc{font-size:14px}
+.toc ol{margin:6px 0 0;padding-left:22px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.theme-btn{position:fixed;top:12px;right:12px;font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--fg);font-family:inherit}
+svg .muted{fill:var(--muted)}
+.term{font-weight:700}
+.note{font-size:13.5px;color:var(--muted)}
+.point{border-left:4px solid var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0}
+
+/* ---- buttons ---- */
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--fg);font-weight:700}
+.counter{font-size:13px;color:var(--muted);margin-left:auto}
+
+/* ---- fig1 ---- */
+.f1-node{cursor:pointer}
+.f1-coder circle{fill:var(--check-soft);stroke:var(--check);stroke-width:2}
+.f1-dongle rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.f1-arrow line{stroke:var(--muted);stroke-width:2;transition:opacity .2s}
+.f1-arrow text{font-size:12px;fill:var(--muted)}
+.f1-arrow.hl line{stroke:var(--accent);stroke-width:3.5}
+.f1-arrow.hl text{fill:var(--accent);font-weight:700}
+.f1-arrow.dim{opacity:.15}
+.f1-head{fill:var(--muted)}
+.f1-head-hl{fill:var(--accent)}
+.f1-table{fill:none;stroke:var(--border);stroke-width:2;stroke-dasharray:6 6}
+.arr{display:flex;gap:0;margin:10px 0 4px;font-family:ui-monospace,Menlo,monospace;font-size:13px;flex-wrap:wrap}
+.arr .lbl{padding:6px 10px 6px 0;color:var(--muted)}
+.arr .slot{border:2px solid var(--accent);background:var(--accent-soft);padding:6px 12px;margin-right:-2px}
+.arr .slot.hl{background:var(--accent);color:#fff}
+
+/* ---- timeline (fig2, fig3) ---- */
+.tl-lane-bg{fill:var(--code-bg)}
+.tl-cur{fill:var(--accent-soft);opacity:.6}
+.tl-head{font-size:12px}
+.tl-head.future{opacity:.35}
+.tl-lane-label{font-size:14px;font-weight:700}
+.cell rect{stroke-width:2}
+.cell .t1{font-size:13.5px;font-weight:700}
+.cell .t2{font-size:11.5px}
+.k-check rect{fill:var(--check-soft);stroke:var(--check)}
+.k-update rect{fill:var(--accent-soft);stroke:var(--accent)}
+.k-lock rect{fill:var(--lock-soft);stroke:var(--lock)}
+.k-wait rect{fill:var(--wait-soft);stroke:var(--wait);stroke-dasharray:5 4}
+.k-ng rect{fill:var(--ng-soft);stroke:var(--ng)}
+.k-ok rect{fill:var(--ok-soft);stroke:var(--ok)}
+.k-zone{fill:var(--lock-soft);opacity:.45}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin:6px 0 2px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:2px solid}
+.lg-check::before{background:var(--check-soft);border-color:var(--check)!important}
+.lg-update::before{background:var(--accent-soft);border-color:var(--accent)!important}
+.lg-lock::before{background:var(--lock-soft);border-color:var(--lock)!important}
+.lg-wait::before{background:var(--wait-soft);border-color:var(--wait)!important;border-style:dashed!important}
+.lg-ng::before{background:var(--ng-soft);border-color:var(--ng)!important}
+.state{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13.5px;background:var(--code-bg)}
+.chip b{font-family:ui-monospace,Menlo,monospace}
+.chip.bad{border-color:var(--ng);background:var(--ng-soft)}
+.chip.good{border-color:var(--ok);background:var(--ok-soft)}
+.msg{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--code-bg);border:1px solid var(--border);min-height:3.6em}
+.msg.bad{background:var(--ng-soft);border-color:var(--ng)}
+.msg.good{background:var(--ok-soft);border-color:var(--ok)}
+
+/* ---- fig4 ---- */
+.f4{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.f4{grid-template-columns:1fr}}
+.box{border:2px solid var(--border);border-radius:12px;padding:12px;min-height:120px}
+.box h3{font-size:14px;margin:0 0 8px;color:var(--muted)}
+.box.lockbox{border-color:var(--lock);background:var(--lock-soft)}
+.pile{display:flex;flex-wrap:wrap;gap:8px}
+.pc{border:2px solid var(--check);background:var(--check-soft);border-radius:999px;padding:3px 12px;font-size:13.5px}
+.pc small{color:var(--muted);margin-left:4px}
+.pc.holder{border-color:var(--lock);background:var(--panel);font-weight:700}
+.pc.flash{animation:flash .6s ease}
+@keyframes flash{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+.log{font-size:13.5px;margin:10px 0 0;padding-left:20px;max-height:220px;overflow-y:auto}
+.log li.surprise{color:var(--ng)}
+
+/* ---- fig5 ---- */
+.flow{display:grid;grid-template-columns:1fr auto 1.4fr auto 1fr;gap:10px;align-items:center}
+@media (max-width:700px){.flow{grid-template-columns:1fr}.flow .arrow{transform:rotate(90deg);justify-self:center}}
+.flow .arrow{font-size:22px;color:var(--muted);text-align:center}
+.guard{border:3px solid var(--lock);border-radius:12px;padding:10px;background:var(--lock-soft)}
+.guard .gt{font-size:12.5px;color:var(--lock);font-weight:700;margin-bottom:6px}
+.queue{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.queue li{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13.5px;
+  display:flex;justify-content:space-between;gap:8px;transition:transform .3s}
+.queue li.first{border:2px solid var(--accent);font-weight:700}
+.queue li .k{font-family:ui-monospace,Menlo,monospace;color:var(--muted);font-weight:400}
+.dbox{border:2px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:10px;text-align:center}
+.req{border:1px solid var(--border);border-radius:12px;padding:10px;font-size:13.5px}
+table.t{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+table.t th,table.t td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg)}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" type="button">テーマ切替</button>
+<main>
+  <header>
+    <h1><span class="accent">mutex</span> を図で理解する</h1>
+    <div class="meta">Codexion 用メモ ･ ドングルの取り合いを例にする</div>
+  </header>
+
+  <div class="card toc">
+    <b>この資料の流れ</b>
+    <ol>
+      <li><a href="#f1">データの置き場所：ドングルの実物は1か所だけにある</a></li>
+      <li><a href="#f2">鍵なしの事故：2人が同じドングルを取ってしまう</a></li>
+      <li><a href="#f3">鍵ありの流れ：①確認と②更新の間に誰も入れない</a></li>
+      <li><a href="#f4">mutex は順番を決めない</a></li>
+      <li><a href="#f5">待ち行列との分担：順番は fifo / edf が決める</a></li>
+    </ol>
+  </div>
+
+  <!-- ================= 1 ================= -->
+  <section id="f1">
+    <h2><span class="no">1</span>データの置き場所</h2>
+    <p>ドングルの実物（<code>t_dongle</code>）は、<code>dongles</code> という配列の中に1本ずつ置かれる。各 corder は、ドングルの実物ではなく、実物の住所（ポインタ）を <code>left</code> と <code>right</code> に持つ。</p>
+    <p>コーダーかドングルをクリックすると、その対象につながる矢印が強調される。</p>
+    <div class="card">
+      <svg id="f1svg" viewBox="0 0 520 380" role="img" aria-label="4人の corder と4本のドングルの関係図"></svg>
+      <div class="arr" id="f1arr"></div>
+      <div class="msg" id="f1msg">ドングルをクリックすると、そのドングルを指している corder が分かる。</div>
+    </div>
+    <div class="point">隣どうしの corder 2人は、同じ1本のドングルの住所を持つ。住所の先にある実物は1つなので、片方の corder が書き換えた状態は、もう片方の corder にもそのまま見える。</div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="f2">
+    <h2><span class="no">2</span>鍵なしの事故</h2>
+    <p>corder A と corder B は、同じドングルを次のコードで取ろうとする。このコードは mutex を使っていない。</p>
+<pre><code>if (dongle-&gt;in_use == false)   // ① check
+	dongle-&gt;in_use = true;     // ② update</code></pre>
+    <p>「次へ」を押すと、時刻が1つずつ進む。横軸は時刻を表し、縦の段は各 corder が実行している処理を表す。</p>
+    <div class="card">
+      <div class="legend"><span class="lg-check">①確認</span><span class="lg-update">②更新</span><span class="lg-ng">事故</span></div>
+      <div class="scroll"><svg id="f2svg"></svg></div>
+      <div class="state" id="f2state"></div>
+      <div class="msg" id="f2msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="f2prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="f2next" type="button">次へ ▶</button>
+        <button class="btn" id="f2reset" type="button">最初から</button>
+        <span class="counter" id="f2count"></span>
+      </div>
+    </div>
+    <div class="point">事故の原因は、corder A の①確認と②更新の間に、corder B の①確認が入り込んだことにある。corder A が①で得た「空いている」という結果は、②の時点ではもう正しくない。</div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="f3">
+    <h2><span class="no">3</span>鍵ありの流れ</h2>
+    <p>次のコードは、①確認と②更新を lock と unlock の間に入れている。lock から unlock までの区間は <span class="term">クリティカルセクション</span>（割り込まれてはいけない区間）と呼ばれる。</p>
+<pre><code>pthread_mutex_lock(&amp;dongle-&gt;mutex);   // take the key (wait if someone has it)
+if (dongle-&gt;in_use == false)          // ① check
+	dongle-&gt;in_use = true;            // ② update
+pthread_mutex_unlock(&amp;dongle-&gt;mutex); // give the key back</code></pre>
+    <div class="card">
+      <div class="legend"><span class="lg-lock">lock / unlock</span><span class="lg-check">①確認</span><span class="lg-update">②更新</span><span class="lg-wait">lock の行で待機</span></div>
+      <div class="scroll"><svg id="f3svg"></svg></div>
+      <div class="state" id="f3state"></div>
+      <div class="msg" id="f3msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="f3prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="f3next" type="button">次へ ▶</button>
+        <button class="btn" id="f3reset" type="button">最初から</button>
+        <span class="counter" id="f3count"></span>
+      </div>
+    </div>
+    <div class="point">CPU の上では、①と②は別々の命令として順に実行される。それでも corder B は、corder A の①と②の間の状態を一度も見られない。そのため、corder B から見ると、corder A の①と②は割り込めない1つの処理として振る舞う。</div>
+    <p class="note">mutex が待たせる相手は、同じ mutex を lock しようとしたスレッドだけである。<code>in_use</code> を鍵なしで触る行が1か所でもあれば、その行ではこの防御が働かない。</p>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="f4">
+    <h2><span class="no">4</span>mutex は順番を決めない</h2>
+    <p>鍵が返されたとき、次にどの corder が鍵を取るかは、OS のスケジューラ（どのスレッドをいつ動かすかを決める OS の仕組み）が決める。mutex は、待ち始めた順番を覚えていない。</p>
+    <p>「unlock する」を押すと、今の持ち主が鍵を返し、待っている corder の中から次の持ち主が選ばれる。鍵を返した corder も、すぐにまた lock を呼んで取り合いに加わる。</p>
+    <div class="card">
+      <div class="f4">
+        <div class="box lockbox">
+          <h3>鍵（mutex）を今持っている corder</h3>
+          <div class="pile" id="f4holder"></div>
+        </div>
+        <div class="box">
+          <h3>lock の行で待っている corder（並び順に意味はない）</h3>
+          <div class="pile" id="f4wait"></div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <button class="btn primary" id="f4next" type="button">unlock する</button>
+        <button class="btn" id="f4ten" type="button">10回まとめて</button>
+        <button class="btn" id="f4reset" type="button">最初から</button>
+      </div>
+      <ol class="log" id="f4log"></ol>
+      <p class="note">赤い行は、「一番長く待っている corder」以外の corder が鍵を取った回を表す。</p>
+    </div>
+    <p class="note">この図は、「順番が保証されない」ことを表すために、次の持ち主をランダムに選んでいる。実際の OS は、サイコロではなく OS 内部の都合で次のスレッドを選ぶ。どちらの場合でも、プログラムは選ばれる順番をあてにできない。</p>
+    <div class="point">鍵を何度も取り逃がして待ち続ける状態は、<span class="term">starvation</span>（飢餓）と呼ばれる。mutex だけでは starvation を防げない。</div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="f5">
+    <h2><span class="no">5</span>待ち行列との分担</h2>
+    <p>課題文は、ドングルを fifo（要求が届いた順）か edf（燃え尽き期限が一番早い順）で渡すことを求めている。この順番は、各ドングルが持つ待ち行列（自作のヒープ＝優先度付きの並び）が決める。mutex は、待ち行列を操作している最中に割り込まれないように守る。</p>
+    <div class="ctrl" style="margin-bottom:8px">
+      <span>scheduler：</span>
+      <button class="btn on" id="f5fifo" type="button">fifo</button>
+      <button class="btn" id="f5edf" type="button">edf</button>
+    </div>
+    <div class="card">
+      <div class="flow">
+        <div class="req">
+          <b>要求してきた corder</b>
+          <div class="note">同じドングルを、ほぼ同時に3人が要求した。</div>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="guard">
+          <div class="gt">🔒 mutex が守る範囲</div>
+          <div class="note" style="margin-bottom:6px">待ち行列（先頭がドングルを受け取る）</div>
+          <ol class="queue" id="f5queue"></ol>
+        </div>
+        <div class="arrow">➜</div>
+        <div class="dbox">
+          <b>ドングル</b>
+          <div id="f5who" style="margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="msg" id="f5msg"></div>
+      <div class="scroll">
+        <table class="t">
+          <thead><tr><th>corder</th><th>要求が届いた時刻</th><th>燃え尽き期限<br><span class="note">last_compile_start + time_to_burnout</span></th></tr></thead>
+          <tbody id="f5tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>担当</th><th>担当する仕事</th></tr></thead>
+        <tbody>
+          <tr><td>mutex</td><td>「待ち行列に並ぶ」「先頭が自分か確認する」「ドングルを受け取って行列から抜ける」という操作の最中に、他の corder が割り込まないように守る。</td></tr>
+          <tr><td>待ち行列</td><td>scheduler の種類（fifo / edf）に従って、次にドングルを受け取る corder を決める。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent, text){
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function $(id){ return document.getElementById(id); }
+
+  /* ---------- theme ---------- */
+  $('themeBtn').addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  /* ---------- fig1 ---------- */
+  (function(){
+    var svg = $('f1svg'), N = 4, cx = 260, cy = 190, R = 145, r = 82;
+    var defs = el('defs', {}, svg);
+    [['f1h', 'f1-head'], ['f1hh', 'f1-head-hl']].forEach(function(m){
+      var mk = el('marker', {id: m[0], viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'}, defs);
+      el('path', {d: 'M0,0 L10,5 L0,10 z', 'class': m[1]}, mk);
+    });
+    el('circle', {cx: cx, cy: cy, r: 112, 'class': 'f1-table'}, svg);
+    el('text', {x: cx, y: cy - 4, 'text-anchor': 'middle', 'class': 'muted', 'font-size': 12}, svg, '円卓');
+    el('text', {x: cx, y: cy + 14, 'text-anchor': 'middle', 'class': 'muted', 'font-size': 11}, svg, '(N = 4 の例)');
+
+    function pos(deg, rad){ var a = deg * Math.PI / 180; return [cx + rad * Math.cos(a), cy + rad * Math.sin(a)]; }
+    var coders = [], dongles = [], arrows = [];
+    for (var i = 0; i < N; i++){
+      coders.push(pos(270 + 90 * i, R));
+      dongles.push(pos(225 + 90 * i, r));
+    }
+    var arrowLayer = el('g', {}, svg);
+    for (i = 0; i < N; i++){
+      [['left', i], ['right', (i + 1) % N]].forEach(function(p){
+        var c = coders[i], d = dongles[p[1]];
+        var dx = d[0] - c[0], dy = d[1] - c[1], len = Math.sqrt(dx * dx + dy * dy);
+        var ux = dx / len, uy = dy / len;
+        var g = el('g', {'class': 'f1-arrow'}, arrowLayer);
+        var ln = el('line', {x1: c[0] + ux * 30, y1: c[1] + uy * 30, x2: d[0] - ux * 24, y2: d[1] - uy * 24, 'marker-end': 'url(#f1h)'}, g);
+        var mx = (c[0] + d[0]) / 2 - uy * 14, my = (c[1] + d[1]) / 2 + ux * 14;
+        el('text', {x: mx, y: my + 4, 'text-anchor': 'middle'}, g, p[0]);
+        arrows.push({g: g, line: ln, coder: i, dongle: p[1], side: p[0]});
+      });
+    }
+    var coderEls = [], dongleEls = [];
+    for (i = 0; i < N; i++){
+      var g = el('g', {'class': 'f1-node f1-coder', tabindex: 0}, svg);
+      el('circle', {cx: coders[i][0], cy: coders[i][1], r: 28}, g);
+      el('text', {x: coders[i][0], y: coders[i][1] - 2, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700}, g, 'corder');
+      el('text', {x: coders[i][0], y: coders[i][1] + 14, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700}, g, 'id ' + (i + 1));
+      coderEls.push(g);
+      var h = el('g', {'class': 'f1-node f1-dongle', tabindex: 0}, svg);
+      el('rect', {x: dongles[i][0] - 34, y: dongles[i][1] - 14, width: 68, height: 28, rx: 6}, h);
+      el('text', {x: dongles[i][0], y: dongles[i][1] + 5, 'text-anchor': 'middle', 'font-size': 12}, h, 'dongles[' + i + ']');
+      dongleEls.push(h);
+    }
+    var arr = $('f1arr');
+    var lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = 't_dongle dongles[4] =';
+    arr.appendChild(lbl);
+    var slots = [];
+    for (i = 0; i < N; i++){
+      var s = document.createElement('span'); s.className = 'slot'; s.textContent = '[' + i + ']';
+      arr.appendChild(s); slots.push(s);
+    }
+    function highlight(pred, slotIdx, msg){
+      arrows.forEach(function(a){
+        var on = pred(a);
+        a.g.classList.toggle('hl', on);
+        a.g.classList.toggle('dim', !on);
+        a.line.setAttribute('marker-end', on ? 'url(#f1hh)' : 'url(#f1h)');
+      });
+      slots.forEach(function(s, k){ s.classList.toggle('hl', slotIdx.indexOf(k) >= 0); });
+      $('f1msg').textContent = msg;
+    }
+    dongleEls.forEach(function(g, k){
+      function go(){
+        var who = arrows.filter(function(a){ return a.dongle === k; })
+          .map(function(a){ return 'corder ' + (a.coder + 1) + ' の ' + a.side; });
+        highlight(function(a){ return a.dongle === k; }, [k],
+          'dongles[' + k + '] を指しているのは、' + who.join(' と ') + ' である。2つのポインタは同じ実物を指しているので、2人の corder は同じ状態を見る。');
+      }
+      g.addEventListener('click', go);
+      g.addEventListener('keydown', function(e){ if (e.key === 'Enter') go(); });
+    });
+    coderEls.forEach(function(g, k){
+      function go(){
+        var l = k, rr = (k + 1) % N;
+        highlight(function(a){ return a.coder === k; }, [l, rr],
+          'corder ' + (k + 1) + ' は、left に dongles[' + l + '] の住所を、right に dongles[' + rr + '] の住所を持つ。right の番号は (i + 1) % N で計算するので、最後の corder の right は dongles[0] に戻る。');
+      }
+      g.addEventListener('click', go);
+      g.addEventListener('keydown', function(e){ if (e.key === 'Enter') go(); });
+    });
+  })();
+
+  /* ---------- timeline (fig2, fig3) ---------- */
+  function Timeline(prefix, cfg){
+    var step = 0, last = cfg.steps.length - 1;
+    var svg = $(prefix + 'svg');
+    var LW = 100, CW = 122, LH = 66, TOP = 32;
+    var W = LW + last * CW + 8, H = TOP + cfg.lanes.length * LH + 6;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.style.minWidth = Math.min(W, 640) + 'px';
+
+    function render(){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (step > 0) el('rect', {x: LW + (step - 1) * CW, y: 0, width: CW, height: H, rx: 8, 'class': 'tl-cur'}, svg);
+      for (var c = 1; c <= last; c++){
+        el('text', {x: LW + (c - 1) * CW + CW / 2, y: 20, 'text-anchor': 'middle', 'class': 'tl-head' + (c > step ? ' future' : '')}, svg, '時刻 ' + c);
+      }
+      cfg.lanes.forEach(function(lane, li){
+        var y = TOP + li * LH;
+        el('rect', {x: 0, y: y + 4, width: W, height: LH - 8, rx: 8, 'class': 'tl-lane-bg'}, svg);
+        el('text', {x: 12, y: y + LH / 2 + 5, 'class': 'tl-lane-label'}, svg, lane.name);
+        for (var c = 1; c <= step; c++){
+          var cell = cfg.steps[c].cells[lane.key];
+          if (!cell) continue;
+          var x = LW + (c - 1) * CW;
+          var g = el('g', {'class': 'cell k-' + cell.k}, svg);
+          el('rect', {x: x + 6, y: y + 9, width: CW - 12, height: LH - 18, rx: 8}, g);
+          el('text', {x: x + CW / 2, y: y + 29, 'text-anchor': 'middle', 'class': 't1'}, g, cell.t);
+          if (cell.n) el('text', {x: x + CW / 2, y: y + 45, 'text-anchor': 'middle', 'class': 't2'}, g, cell.n);
+        }
+      });
+      var st = cfg.steps[step];
+      var box = $(prefix + 'state');
+      box.innerHTML = '';
+      cfg.stateKeys.forEach(function(k){
+        var d = document.createElement('div');
+        d.className = 'chip' + (st.mark && st.mark[k[0]] ? ' ' + st.mark[k[0]] : '');
+        d.innerHTML = k[1] + '：<b></b>';
+        d.querySelector('b').textContent = st.state[k[0]];
+        box.appendChild(d);
+      });
+      var m = $(prefix + 'msg');
+      m.textContent = st.msg;
+      m.className = 'msg' + (st.result ? ' ' + st.result : '');
+      $(prefix + 'prev').disabled = step === 0;
+      $(prefix + 'next').disabled = step === last;
+      $(prefix + 'count').textContent = step + ' / ' + last;
+    }
+    $(prefix + 'prev').addEventListener('click', function(){ if (step > 0){ step--; render(); } });
+    $(prefix + 'next').addEventListener('click', function(){ if (step < last){ step++; render(); } });
+    $(prefix + 'reset').addEventListener('click', function(){ step = 0; render(); });
+    render();
+  }
+
+  var LANES = [{key: 'A', name: 'corder A'}, {key: 'B', name: 'corder B'}];
+
+  Timeline('f2', {
+    lanes: LANES,
+    stateKeys: [['in_use', 'in_use'], ['holder', 'ドングルを持っている corder']],
+    steps: [
+      {cells: {}, state: {in_use: 'false', holder: 'なし'},
+        msg: '初期状態では、ドングルは空いていて、in_use は false である。'},
+      {cells: {A: {k: 'check', t: '①確認', n: 'false を読む'}}, state: {in_use: 'false', holder: 'なし'},
+        msg: 'corder A が in_use を読み、false を得る。corder A は「空いている」と判断する。'},
+      {cells: {B: {k: 'check', t: '①確認', n: 'false を読む'}}, state: {in_use: 'false', holder: 'なし'},
+        msg: 'corder A が②に進む前に、OS が corder B を動かす。corder B も false を読み、「空いている」と判断する。'},
+      {cells: {A: {k: 'update', t: '②更新', n: 'true を書く'}}, state: {in_use: 'true', holder: 'corder A'},
+        msg: 'corder A が in_use を true にして、ドングルを取る。'},
+      {cells: {B: {k: 'ng', t: '②更新', n: 'true を書く'}}, state: {in_use: 'true', holder: 'corder A と corder B'},
+        mark: {holder: 'bad'}, result: 'bad',
+        msg: 'corder B も、時刻2の①で得た古い結果を信じて true を書き、ドングルを取る。2人の corder が同じ1本のドングルを持つ事故が起きる。'}
+    ]
+  });
+
+  Timeline('f3', {
+    lanes: LANES,
+    stateKeys: [['lock', '鍵の持ち主'], ['in_use', 'in_use'], ['holder', 'ドングルを持っている corder']],
+    steps: [
+      {cells: {}, state: {lock: 'なし', in_use: 'false', holder: 'なし'},
+        msg: '初期状態では、鍵（mutex）は誰も持っておらず、in_use は false である。'},
+      {cells: {A: {k: 'lock', t: 'lock', n: '鍵を取る'}}, state: {lock: 'corder A', in_use: 'false', holder: 'なし'},
+        msg: 'corder A が pthread_mutex_lock を呼ぶ。鍵が空いているので、corder A が鍵を取って先へ進む。'},
+      {cells: {A: {k: 'check', t: '①確認', n: 'false を読む'}, B: {k: 'wait', t: 'lock', n: '待機（止まる）'}},
+        state: {lock: 'corder A', in_use: 'false', holder: 'なし'},
+        msg: 'corder A が in_use を読み、false を得る。同じ時刻に corder B も lock を呼ぶ。鍵は corder A が持っているので、corder B は lock の行で止まる。'},
+      {cells: {A: {k: 'update', t: '②更新', n: 'true を書く'}, B: {k: 'wait', t: 'lock', n: '待機（止まる）'}},
+        state: {lock: 'corder A', in_use: 'true', holder: 'corder A'},
+        msg: 'corder A が in_use を true にして、ドングルを取る。corder B は止まったままなので、corder A の①と②の間の状態を見られない。'},
+      {cells: {A: {k: 'lock', t: 'unlock', n: '鍵を返す'}, B: {k: 'lock', t: 'lock', n: '鍵を取る'}},
+        state: {lock: 'corder B', in_use: 'true', holder: 'corder A'},
+        msg: 'corder A が pthread_mutex_unlock で鍵を返す。待っていた corder B が鍵を取り、lock の行から先へ進む。'},
+      {cells: {B: {k: 'check', t: '①確認', n: 'true を読む'}},
+        state: {lock: 'corder B', in_use: 'true', holder: 'corder A'},
+        msg: 'corder B が in_use を読み、true を得る。corder B は「使用中」と判断するので、②の更新を実行しない。'},
+      {cells: {B: {k: 'lock', t: 'unlock', n: '鍵を返す'}},
+        state: {lock: 'なし', in_use: 'true', holder: 'corder A'},
+        mark: {holder: 'good'}, result: 'good',
+        msg: 'corder B も unlock で鍵を返す。corder B は②を実行しなかったが、unlock は必ず実行する。結果として、ドングルを持つ corder は corder A だけになる。'}
+    ]
+  });
+
+  /* ---------- fig4 ---------- */
+  (function(){
+    var holder, waiters, round, order, log = $('f4log');
+    function reset(){
+      holder = 3;
+      waiters = [1, 2, 4];   // index = order in which they started waiting
+      order = {1: 1, 2: 2, 4: 3};
+      round = 0;
+      log.innerHTML = '';
+      draw(null);
+    }
+    function chip(id, cls, sub){
+      var d = document.createElement('span');
+      d.className = 'pc' + (cls ? ' ' + cls : '');
+      d.textContent = 'corder ' + id;
+      if (sub){ var s = document.createElement('small'); s.textContent = sub; d.appendChild(s); }
+      return d;
+    }
+    function draw(flashId){
+      var h = $('f4holder'); h.innerHTML = '';
+      h.appendChild(chip(holder, 'holder' + (flashId === holder ? ' flash' : '')));
+      var w = $('f4wait'); w.innerHTML = '';
+      // shuffle display order so that position carries no meaning
+      waiters.slice().sort(function(){ return Math.random() - .5; }).forEach(function(id){
+        w.appendChild(chip(id, '', '待ち始め ' + order[id] + ' 番目'));
+      });
+    }
+    function once(){
+      round++;
+      var prev = holder;
+      // the releasing coder calls lock again right away and joins the race
+      var cands = waiters.concat([prev]);
+      var next = cands[Math.floor(Math.random() * cands.length)];
+      var oldest = waiters.reduce(function(a, b){ return order[a] < order[b] ? a : b; });
+      var li = document.createElement('li');
+      if (next === prev){
+        li.textContent = round + '回目：corder ' + prev + ' が鍵を返した直後に、corder ' + prev + ' 自身がまた鍵を取った。待っていた corder はまた待たされる。';
+        li.className = 'surprise';
+      } else {
+        li.textContent = round + '回目：corder ' + next + ' が鍵を取った（corder ' + next + ' の待ち始めは ' + order[next] + ' 番目）。';
+        if (next !== oldest) li.className = 'surprise';
+      }
+      log.insertBefore(li, log.firstChild);
+      if (next !== prev){
+        waiters = waiters.filter(function(id){ return id !== next; });
+        waiters.push(prev);
+        holder = next;
+      }
+      // renumber wait order: remaining waiters keep relative order, newcomer goes last
+      var newOrder = {};
+      var sorted = waiters.slice().sort(function(a, b){ return (order[a] || 99) - (order[b] || 99); });
+      sorted.forEach(function(id, k){ newOrder[id] = k + 1; });
+      order = newOrder;
+      draw(holder);
+    }
+    $('f4next').addEventListener('click', once);
+    $('f4ten').addEventListener('click', function(){ for (var i = 0; i < 10; i++) once(); });
+    $('f4reset').addEventListener('click', reset);
+    reset();
+  })();
+
+  /* ---------- fig5 ---------- */
+  (function(){
+    var reqs = [
+      {id: 1, arrive: 10, deadline: 900},
+      {id: 2, arrive: 20, deadline: 650},
+      {id: 4, arrive: 30, deadline: 700}
+    ];
+    var tb = $('f5tbody');
+    reqs.forEach(function(r){
+      var tr = document.createElement('tr');
+      ['corder ' + r.id, r.arrive + ' ms', r.deadline + ' ms'].forEach(function(v){
+        var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    function show(mode){
+      $('f5fifo').classList.toggle('on', mode === 'fifo');
+      $('f5edf').classList.toggle('on', mode === 'edf');
+      var key = mode === 'fifo' ? 'arrive' : 'deadline';
+      var sorted = reqs.slice().sort(function(a, b){ return a[key] - b[key]; });
+      var q = $('f5queue'); q.innerHTML = '';
+      sorted.forEach(function(r, k){
+        var li = document.createElement('li');
+        if (k === 0) li.className = 'first';
+        var a = document.createElement('span'); a.textContent = (k + 1) + '. corder ' + r.id;
+        var b = document.createElement('span'); b.className = 'k';
+        b.textContent = mode === 'fifo' ? '到着 ' + r.arrive + ' ms' : '期限 ' + r.deadline + ' ms';
+        li.appendChild(a); li.appendChild(b); q.appendChild(li);
+      });
+      $('f5who').textContent = 'corder ' + sorted[0].id + ' に渡す';
+      $('f5msg').textContent = mode === 'fifo'
+        ? 'fifo では、要求が届いた時刻が一番早い corder が先頭になる。corder 1 の要求は 10 ms に届き、3人の中で一番早いので、corder 1 がドングルを受け取る。'
+        : 'edf では、燃え尽き期限が一番早い corder が先頭になる。corder 2 の期限は 650 ms で、3人の中で一番早いので、corder 2 がドングルを受け取る。';
+    }
+    $('f5fifo').addEventListener('click', function(){ show('fifo'); });
+    $('f5edf').addEventListener('click', function(){ show('edf'); });
+    show('fifo');
+  })();
+})();
+</script>
+</body>
+</html>

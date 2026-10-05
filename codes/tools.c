@@ -6,11 +6,12 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:29:59 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/01 03:52:11 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/02 17:13:31 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
+#include <stdarg.h>
 
 bool	is_scheduler(char *str)
 {
@@ -41,4 +42,33 @@ bool	set_num(char *str, uintmax_t *num)
 		i++;
 	}
 	return (*num = result, true);
+}
+
+bool	set_scheduler(char *src, char *dst)
+{
+	size_t	i;
+
+	i = 0;
+	while (src[i])
+	{
+		dst[i] = src[i];
+		i++;
+	}
+	dst[i] = '\0';
+	return (true);
+}
+
+void	free_all(int count, ...)
+{
+	va_list	args;
+	int		i;
+
+	va_start(args, count);
+	i = 0;
+	while (i < count)
+	{
+		free(va_arg(args, void *));
+		i++;
+	}
+	va_end(args);
 }

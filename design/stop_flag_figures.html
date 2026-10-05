@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>停止フラグ 図解: Codexion</title>
+<style>
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --fg:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#c2410c; --accent-soft:#ffedd5;
+  --code-bg:#f1f5f9;
+  --check:#1d4ed8; --check-soft:#dbeafe;
+  --lock:#6d28d9;  --lock-soft:#ede9fe;
+  --wait:#64748b;  --wait-soft:#e2e8f0;
+  --ng:#b91c1c;    --ng-soft:#fee2e2;
+  --ok:#15803d;    --ok-soft:#dcfce7;
+  --shadow:0 1px 3px rgba(15,23,42,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+    --code-bg:#0b1220;
+    --check:#93c5fd; --check-soft:#1e3a8a;
+    --lock:#c4b5fd;  --lock-soft:#4c1d95;
+    --wait:#94a3b8;  --wait-soft:#334155;
+    --ng:#fca5a5;    --ng-soft:#7f1d1d;
+    --ok:#86efac;    --ok-soft:#14532d;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+  --code-bg:#0b1220;
+  --check:#93c5fd; --check-soft:#1e3a8a;
+  --lock:#c4b5fd;  --lock-soft:#4c1d95;
+  --wait:#94a3b8;  --wait-soft:#334155;
+  --ng:#fca5a5;    --ng-soft:#7f1d1d;
+  --ok:#86efac;    --ok-soft:#14532d;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.85;font-size:15.5px}
+main{max-width:920px;margin:0 auto;padding:28px 16px 90px}
+h1{font-size:25px;margin:0 0 4px}
+h1 .accent{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted)}
+section{margin-top:44px}
+h2{font-size:20px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+h2 .no{color:var(--accent);margin-right:8px}
+p{margin:8px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;overflow-x:auto;font-size:13.5px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin:12px 0}
+.toc{font-size:14px}
+.toc ol{margin:6px 0 0;padding-left:22px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.theme-btn{position:fixed;top:12px;right:12px;font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--fg);font-family:inherit}
+.term{font-weight:700}
+.note{font-size:13.5px;color:var(--muted)}
+.point{border-left:4px solid var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0}
+
+/* ---- buttons ---- */
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.counter{font-size:13px;color:var(--muted);margin-left:auto}
+
+/* ---- timeline ---- */
+.tl-lane-bg{fill:var(--code-bg)}
+.tl-cur{fill:var(--accent-soft);opacity:.6}
+.tl-head{font-size:12px}
+.tl-head.future{opacity:.35}
+.tl-lane-label{font-size:13.5px;font-weight:700}
+.cell rect{stroke-width:2}
+.cell .t1{font-size:13px;font-weight:700}
+.cell .t2{font-size:11px}
+.k-check rect{fill:var(--check-soft);stroke:var(--check)}
+.k-update rect{fill:var(--accent-soft);stroke:var(--accent)}
+.k-lock rect{fill:var(--lock-soft);stroke:var(--lock)}
+.k-wait rect{fill:var(--wait-soft);stroke:var(--wait);stroke-dasharray:5 4}
+.k-ng rect{fill:var(--ng-soft);stroke:var(--ng)}
+.k-ok rect{fill:var(--ok-soft);stroke:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin:6px 0 2px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:2px solid}
+.lg-check::before{background:var(--check-soft);border-color:var(--check)!important}
+.lg-update::before{background:var(--accent-soft);border-color:var(--accent)!important}
+.lg-lock::before{background:var(--lock-soft);border-color:var(--lock)!important}
+.lg-wait::before{background:var(--wait-soft);border-color:var(--wait)!important;border-style:dashed!important}
+.lg-ng::before{background:var(--ng-soft);border-color:var(--ng)!important}
+.lg-ok::before{background:var(--ok-soft);border-color:var(--ok)!important}
+.state{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13.5px;background:var(--code-bg)}
+.chip b{font-family:ui-monospace,Menlo,monospace}
+.chip.bad{border-color:var(--ng);background:var(--ng-soft)}
+.chip.good{border-color:var(--ok);background:var(--ok-soft)}
+.msg{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--code-bg);border:1px solid var(--border);min-height:3.6em}
+.msg.bad{background:var(--ng-soft);border-color:var(--ng)}
+.msg.good{background:var(--ok-soft);border-color:var(--ok)}
+
+/* ---- summary ---- */
+.cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:720px){.cmp{grid-template-columns:1fr}}
+.cmp .c{border:2px solid var(--border);border-radius:12px;padding:12px;background:var(--panel)}
+.cmp .c.bad{border-color:var(--ng)}
+.cmp .c.good{border-color:var(--ok)}
+.cmp h3{font-size:15px;margin:0 0 6px}
+.cmp .has{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin:0 0 8px}
+.cmp .has span{display:inline-block;padding:0 6px;border-radius:4px;margin-right:4px}
+.cmp .has .y{background:var(--ok-soft)}
+.cmp .has .n{background:var(--ng-soft);text-decoration:line-through}
+.cmp .res{font-weight:700}
+.cmp .c.bad .res{color:var(--ng)}
+.cmp .c.good .res{color:var(--ok)}
+.cmp a{color:var(--accent);font-size:13px}
+table.t{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+table.t th,table.t td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg)}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" type="button">テーマ切替</button>
+<main>
+  <header>
+    <h1><span class="accent">stop</span> と <span class="accent">stop_mutex</span> を図で理解する</h1>
+    <div class="meta">Codexion 用メモ ･ pthread_create が途中で失敗した場面を例にする</div>
+  </header>
+
+  <div class="card toc">
+    <b>この資料の流れ</b>
+    <ol>
+      <li><a href="#s0">3つの場合の比較（まとめ）</a></li>
+      <li><a href="#s1">stop も stop_mutex もない場合：join が永遠に待つ</a></li>
+      <li><a href="#s2">stop だけある場合：読み書きがぶつかる</a></li>
+      <li><a href="#s3">stop と stop_mutex の両方がある場合：全員が確実に止まる</a></li>
+      <li><a href="#s4">コードのまとめ</a></li>
+    </ol>
+  </div>
+
+  <!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2><span class="no">0</span>3つの場合の比較</h2>
+    <p>この資料の例では、run_simulations が corder を3人作ろうとする。corder 1 と corder 2 のスレッドは作成に成功し、corder 3 のスレッドは作成に失敗する。run_simulations は、失敗に気づいたあと、作成済みの corder 1 と corder 2 を pthread_join で待つ。</p>
+    <div class="cmp">
+      <div class="c bad">
+        <h3>1. 両方なし</h3>
+        <p class="has"><span class="n">stop</span><span class="n">stop_mutex</span></p>
+        <p class="res">プログラムが終わらない</p>
+        <p class="note">corder は「止まれ」の合図を受け取る手段がない。そのため corder はループを回り続け、join も待ち続ける。</p>
+        <a href="#s1">図を見る ↓</a>
+      </div>
+      <div class="c bad">
+        <h3>2. stop だけ</h3>
+        <p class="has"><span class="y">stop</span><span class="n">stop_mutex</span></p>
+        <p class="res">止まるかどうか保証されない</p>
+        <p class="note">main スレッドの書き込みと corder の読み込みがぶつかる。このぶつかりはデータ競合と呼ばれ、C言語では未定義動作になる。</p>
+        <a href="#s2">図を見る ↓</a>
+      </div>
+      <div class="c good">
+        <h3>3. 両方あり</h3>
+        <p class="has"><span class="y">stop</span><span class="y">stop_mutex</span></p>
+        <p class="res">全員が確実に止まる</p>
+        <p class="note">stop を読み書きするスレッドは、常に鍵を持つ1本だけになる。corder は次の確認で必ず true を読む。</p>
+        <a href="#s3">図を見る ↓</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2><span class="no">1</span>stop も stop_mutex もない場合</h2>
+    <p>corder のスレッドは、次のような終わらないループを回る。このループには、外から止める条件がない。</p>
+<pre><code>while (1)
+{
+	// take dongles, compile, debug, refactor ...
+}</code></pre>
+    <p>「次へ」を押すと、時刻が1つずつ進む。横軸は時刻を表し、縦の段は各スレッドが実行している処理を表す。</p>
+    <div class="card">
+      <div class="legend"><span class="lg-check">通常の処理</span><span class="lg-wait">join で待機</span><span class="lg-ng">失敗・問題</span></div>
+      <div class="scroll"><svg id="t1svg"></svg></div>
+      <div class="state" id="t1state"></div>
+      <div class="msg" id="t1msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="t1prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="t1next" type="button">次へ ▶</button>
+        <button class="btn" id="t1reset" type="button">最初から</button>
+        <span class="counter" id="t1count"></span>
+      </div>
+    </div>
+    <div class="point">pthread_join は、相手のスレッドが関数から return するまで待ち続ける。相手のスレッドがループを抜ける手段を持たなければ、join も終わらない。</div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2><span class="no">2</span>stop だけある場合</h2>
+    <p>corder のループ条件が stop を見るようになる。main スレッドは、失敗に気づいたら stop に true を書く。しかし、どちらの読み書きも鍵（mutex）を使っていない。</p>
+<pre><code>// corder thread
+while (corder-&gt;data-&gt;stop == false)
+{
+	...
+}
+
+// main thread (on failure)
+data.stop = true;</code></pre>
+    <div class="card">
+      <div class="legend"><span class="lg-check">stop を読む</span><span class="lg-update">stop に書く</span><span class="lg-wait">join で待機</span><span class="lg-ng">失敗・問題</span><span class="lg-ok">終了</span></div>
+      <div class="scroll"><svg id="t2svg"></svg></div>
+      <div class="state" id="t2state"></div>
+      <div class="msg" id="t2msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="t2prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="t2next" type="button">次へ ▶</button>
+        <button class="btn" id="t2reset" type="button">最初から</button>
+        <span class="counter" id="t2count"></span>
+      </div>
+    </div>
+    <div class="point">「stop だけ」の版は、試しに動かすと正しく止まることも多い。しかし、正しく止まる保証はない。保証のないプログラムは、評価のときや別の環境で突然固まることがある。</div>
+    <p class="note">データ競合は、<code>cc -fsanitize=thread</code> でビルドするか、<code>valgrind --tool=helgrind</code> で実行すると検出できる。42 の評価でも、この2つのツールでデータ競合を確認されることが多い。</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2><span class="no">3</span>stop と stop_mutex の両方がある場合</h2>
+    <p>stop を読み書きするスレッドは、必ず先に stop_mutex を lock する。読み書きが終わったら、そのスレッドは stop_mutex を unlock する。この決まりを守らせるために、読み書きを set_stop と is_stopped の2つの関数に閉じ込める。</p>
+<pre><code>// corder thread
+while (is_stopped(corder-&gt;data) == false)
+{
+	...
+}
+
+// main thread (on failure)
+set_stop(&amp;data);</code></pre>
+    <div class="card">
+      <div class="legend"><span class="lg-lock">lock / unlock</span><span class="lg-check">stop を読む・通常の処理</span><span class="lg-update">stop に書く</span><span class="lg-wait">待機</span><span class="lg-ng">失敗</span><span class="lg-ok">終了</span></div>
+      <div class="scroll"><svg id="t3svg"></svg></div>
+      <div class="state" id="t3state"></div>
+      <div class="msg" id="t3msg"></div>
+      <div class="ctrl">
+        <button class="btn" id="t3prev" type="button">◀ 戻る</button>
+        <button class="btn primary" id="t3next" type="button">次へ ▶</button>
+        <button class="btn" id="t3reset" type="button">最初から</button>
+        <span class="counter" id="t3count"></span>
+      </div>
+    </div>
+    <div class="point">mutex の lock と unlock は、「ここまでに書いた値を、次に鍵を取ったスレッドに必ず見せる」ことも保証する。そのため、main スレッドが unlock したあとに鍵を取った corder は、必ず true を読む。</div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2><span class="no">4</span>コードのまとめ</h2>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>メンバ</th><th>置き場所</th><th>役割</th></tr></thead>
+        <tbody>
+          <tr><td><code>stop</code></td><td>t_data</td><td>シミュレーションを止めるべきかを表す。<code>false</code> は「続けてよい」、<code>true</code> は「全員止まれ」を意味する。</td></tr>
+          <tr><td><code>stop_mutex</code></td><td>t_data</td><td><code>stop</code> を読み書きできるスレッドを、同時に1本だけに制限する。</td></tr>
+        </tbody>
+      </table>
+    </div>
+<pre><code>void	set_stop(t_data *data)
+{
+	pthread_mutex_lock(&amp;data-&gt;stop_mutex);
+	data-&gt;stop = true;
+	pthread_mutex_unlock(&amp;data-&gt;stop_mutex);
+}
+
+bool	is_stopped(t_data *data)
+{
+	bool	stop;
+
+	pthread_mutex_lock(&amp;data-&gt;stop_mutex);
+	stop = data-&gt;stop;
+	pthread_mutex_unlock(&amp;data-&gt;stop_mutex);
+	return (stop);
+}</code></pre>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>関数を呼ぶスレッド</th><th>呼ぶ関数</th><th>呼ぶ場面</th></tr></thead>
+        <tbody>
+          <tr><td>main スレッド（run_simulations）</td><td><code>set_stop</code></td><td>pthread_create が途中で失敗したとき。join のループの直前で呼ぶ。</td></tr>
+          <tr><td>monitor スレッド（monitor_routine）</td><td><code>set_stop</code></td><td>燃え尽きた corder を見つけたとき、または全員がコンパイル回数を満たしたとき。</td></tr>
+          <tr><td>各 corder スレッド（run_simulation）</td><td><code>is_stopped</code></td><td>ループの条件を確認するたび。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">ドングル待ち（pthread_cond_wait で眠っている状態）の corder は、眠っている間は is_stopped を呼べない。そのため、set_stop のあとで全ドングルの cond を pthread_cond_broadcast で起こす処理も、後で必要になる。</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent, text){
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function $(id){ return document.getElementById(id); }
+
+  /* ---------- theme ---------- */
+  $('themeBtn').addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  /* ---------- timeline ---------- */
+  function Timeline(prefix, cfg){
+    var step = 0, last = cfg.steps.length - 1;
+    var svg = $(prefix + 'svg');
+    var LW = 104, CW = 118, LH = 66, TOP = 32;
+    var W = LW + last * CW + 8, H = TOP + cfg.lanes.length * LH + 6;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.style.minWidth = Math.min(W, 640) + 'px';
+
+    function render(){
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (step > 0) el('rect', {x: LW + (step - 1) * CW, y: 0, width: CW, height: H, rx: 8, 'class': 'tl-cur'}, svg);
+      for (var c = 1; c <= last; c++){
+        el('text', {x: LW + (c - 1) * CW + CW / 2, y: 20, 'text-anchor': 'middle', 'class': 'tl-head' + (c > step ? ' future' : '')}, svg, '時刻 ' + c);
+      }
+      cfg.lanes.forEach(function(lane, li){
+        var y = TOP + li * LH;
+        el('rect', {x: 0, y: y + 4, width: W, height: LH - 8, rx: 8, 'class': 'tl-lane-bg'}, svg);
+        el('text', {x: 12, y: y + LH / 2 + 5, 'class': 'tl-lane-label'}, svg, lane.name);
+        for (var c = 1; c <= step; c++){
+          var cell = cfg.steps[c].cells[lane.key];
+          if (!cell) continue;
+          var x = LW + (c - 1) * CW;
+          var g = el('g', {'class': 'cell k-' + cell.k}, svg);
+          el('rect', {x: x + 6, y: y + 9, width: CW - 12, height: LH - 18, rx: 8}, g);
+          el('text', {x: x + CW / 2, y: y + 29, 'text-anchor': 'middle', 'class': 't1'}, g, cell.t);
+          if (cell.n) el('text', {x: x + CW / 2, y: y + 45, 'text-anchor': 'middle', 'class': 't2'}, g, cell.n);
+        }
+      });
+      var st = cfg.steps[step];
+      var box = $(prefix + 'state');
+      box.innerHTML = '';
+      cfg.stateKeys.forEach(function(k){
+        var d = document.createElement('div');
+        d.className = 'chip' + (st.mark && st.mark[k[0]] ? ' ' + st.mark[k[0]] : '');
+        d.innerHTML = k[1] + '：<b></b>';
+        d.querySelector('b').textContent = st.state[k[0]];
+        box.appendChild(d);
+      });
+      var m = $(prefix + 'msg');
+      m.textContent = st.msg;
+      m.className = 'msg' + (st.result ? ' ' + st.result : '');
+      $(prefix + 'prev').disabled = step === 0;
+      $(prefix + 'next').disabled = step === last;
+      $(prefix + 'count').textContent = step + ' / ' + last;
+    }
+    $(prefix + 'prev').addEventListener('click', function(){ if (step > 0){ step--; render(); } });
+    $(prefix + 'next').addEventListener('click', function(){ if (step < last){ step++; render(); } });
+    $(prefix + 'reset').addEventListener('click', function(){ step = 0; render(); });
+    render();
+  }
+
+  var LANES = [{key: 'M', name: 'main'}, {key: 'A', name: 'corder 1'}, {key: 'B', name: 'corder 2'}];
+
+  /* ---------- 1: no stop, no mutex ---------- */
+  Timeline('t1', {
+    lanes: LANES,
+    stateKeys: [['main', 'main スレッド'], ['alive', '動いている corder']],
+    steps: [
+      {cells: {}, state: {main: 'スレッド作成前', alive: 'なし'},
+        msg: '初期状態では、main スレッドの run_simulations が、これから corder のスレッドを作る。'},
+      {cells: {M: {k: 'check', t: 'create 1', n: '成功'}},
+        state: {main: 'スレッド作成中', alive: 'corder 1'},
+        msg: 'main スレッドが corder 1 のスレッドを作る。作成は成功し、corder 1 が動き始める。'},
+      {cells: {M: {k: 'check', t: 'create 2', n: '成功'}, A: {k: 'check', t: 'ループ', n: '作業中'}},
+        state: {main: 'スレッド作成中', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが corder 2 のスレッドを作る。作成は成功する。corder 1 は、ループの中で作業を続けている。'},
+      {cells: {M: {k: 'ng', t: 'create 3', n: '失敗'}, A: {k: 'check', t: 'ループ', n: '作業中'}, B: {k: 'check', t: 'ループ', n: '作業中'}},
+        state: {main: '失敗に気づいた', alive: 'corder 1, corder 2'},
+        mark: {main: 'bad'},
+        msg: 'main スレッドが corder 3 のスレッドを作ろうとするが、pthread_create が失敗する。main スレッドは、作成済みの corder を片付けるために join へ進む。'},
+      {cells: {M: {k: 'wait', t: 'join 2', n: '待機'}, A: {k: 'check', t: 'ループ', n: '作業中'}, B: {k: 'check', t: 'ループ', n: '作業中'}},
+        state: {main: 'corder 2 の終了待ち', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが pthread_join で corder 2 の終了を待ち始める。しかし、corder 2 は失敗が起きたことを知る手段を持たない。'},
+      {cells: {M: {k: 'ng', t: 'join 2', n: '待機（∞）'}, A: {k: 'ng', t: 'ループ', n: '止まらない'}, B: {k: 'ng', t: 'ループ', n: '止まらない'}},
+        state: {main: 'corder 2 の終了待ち（永遠）', alive: 'corder 1, corder 2'},
+        mark: {main: 'bad', alive: 'bad'}, result: 'bad',
+        msg: 'corder 1 と corder 2 は、ループを抜ける条件を持たないので、永遠にループを回る。main スレッドも、corder 2 が終わらないので join から戻れない。結果として、プログラム全体が終わらなくなる。'}
+    ]
+  });
+
+  /* ---------- 2: stop only ---------- */
+  Timeline('t2', {
+    lanes: LANES,
+    stateKeys: [['stop', 'メモリ上の stop'], ['seen', 'corder 2 が見ている stop'], ['main', 'main スレッド']],
+    steps: [
+      {cells: {}, state: {stop: 'false', seen: '—', main: 'スレッド作成前'},
+        msg: '初期状態では、t_data の stop は false である。stop を守る鍵（stop_mutex）はない。'},
+      {cells: {M: {k: 'check', t: 'create 1', n: '成功'}},
+        state: {stop: 'false', seen: '—', main: 'スレッド作成中'},
+        msg: 'main スレッドが corder 1 のスレッドを作る。作成は成功する。'},
+      {cells: {M: {k: 'check', t: 'create 2', n: '成功'}, A: {k: 'check', t: 'stop を読む', n: 'false → 続行'}},
+        state: {stop: 'false', seen: '—', main: 'スレッド作成中'},
+        msg: 'main スレッドが corder 2 のスレッドを作る。corder 1 は stop を読み、false を得たのでループを続ける。'},
+      {cells: {M: {k: 'ng', t: 'create 3', n: '失敗'}, A: {k: 'check', t: 'stop を読む', n: 'false → 続行'}, B: {k: 'check', t: 'stop を読む', n: '手元に写す'}},
+        state: {stop: 'false', seen: 'false（手元の写し）', main: '失敗に気づいた'},
+        mark: {main: 'bad'},
+        msg: 'corder 3 の作成が失敗する。同じ時刻に、corder 2 が stop を読む。コンパイラは最適化（プログラムを速くする書き換え）で、「他のスレッドは stop を変えない」と仮定してよい。その仮定のもとで、corder 2 の stop の読み込みは、最初の1回だけになることがある。'},
+      {cells: {M: {k: 'update', t: 'stop = true', n: '鍵なしで書く'}, A: {k: 'ng', t: 'stop を読む', n: '書き込みと衝突'}, B: {k: 'check', t: '写しを見る', n: 'false → 続行'}},
+        state: {stop: 'true', seen: 'false（手元の写し）', main: 'stop を書いた'},
+        mark: {seen: 'bad'},
+        msg: 'main スレッドが stop に true を書く。同じ時刻に、corder 1 が stop を読む。鍵がないので、この書き込みと読み込みは同時に起きてよいことになる。この状態はデータ競合と呼ばれ、C言語では結果が保証されない（未定義動作）。'},
+      {cells: {M: {k: 'wait', t: 'join 2', n: '待機'}, A: {k: 'ok', t: 'true を読めた', n: '運よく終了'}, B: {k: 'check', t: '写しを見る', n: 'false → 続行'}},
+        state: {stop: 'true', seen: 'false（手元の写し）', main: 'corder 2 の終了待ち'},
+        mark: {seen: 'bad'},
+        msg: 'corder 1 は、たまたま true を読めたのでループを抜ける。一方、corder 2 は手元の古い写し（false）を見続けるので、メモリ上の stop が true になったことに気づかない。'},
+      {cells: {M: {k: 'ng', t: 'join 2', n: '待機（∞）'}, B: {k: 'ng', t: '写しを見る', n: '止まらない'}},
+        state: {stop: 'true', seen: 'false（手元の写し）', main: 'corder 2 の終了待ち（永遠）'},
+        mark: {seen: 'bad', main: 'bad'}, result: 'bad',
+        msg: 'corder 2 は永遠にループを回り、main スレッドは join から戻れない。この図は「起こりうる最悪の例」である。実際に固まるかどうかは、コンパイラ・最適化の設定・CPU によって変わる。毎回は固まらないので、この不具合は見つけにくい。'}
+    ]
+  });
+
+  /* ---------- 3: stop + stop_mutex ---------- */
+  Timeline('t3', {
+    lanes: LANES,
+    stateKeys: [['lock', '鍵（stop_mutex）の持ち主'], ['stop', 'stop'], ['alive', '動いている corder']],
+    steps: [
+      {cells: {}, state: {lock: 'なし', stop: 'false', alive: 'なし'},
+        msg: '初期状態では、stop は false で、鍵（stop_mutex）は誰も持っていない。'},
+      {cells: {M: {k: 'check', t: 'create 1', n: '成功'}},
+        state: {lock: 'なし', stop: 'false', alive: 'corder 1'},
+        msg: 'main スレッドが corder 1 のスレッドを作る。作成は成功する。'},
+      {cells: {M: {k: 'check', t: 'create 2', n: '成功'}, A: {k: 'check', t: 'is_stopped', n: 'false → 続行'}},
+        state: {lock: 'なし', stop: 'false', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが corder 2 のスレッドを作る。corder 1 は is_stopped の中で鍵を取り、stop を読み、鍵を返す。corder 1 は false を得たのでループを続ける。'},
+      {cells: {M: {k: 'ng', t: 'create 3', n: '失敗'}, A: {k: 'check', t: '作業', n: 'compile など'}, B: {k: 'check', t: 'is_stopped', n: 'false → 続行'}},
+        state: {lock: 'なし', stop: 'false', alive: 'corder 1, corder 2'},
+        msg: 'corder 3 の作成が失敗する。main スレッドは、join の前に set_stop を呼ぶ。corder 2 は is_stopped で false を得てループを続ける。'},
+      {cells: {M: {k: 'lock', t: 'lock', n: '鍵を取る'}, A: {k: 'wait', t: 'is_stopped', n: 'lock で待機'}, B: {k: 'check', t: '作業', n: 'compile など'}},
+        state: {lock: 'main', stop: 'false', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが set_stop の中で鍵を取る。同じ時刻に corder 1 も is_stopped で鍵を取ろうとする。鍵は main スレッドが持っているので、corder 1 は lock の行で止まる。'},
+      {cells: {M: {k: 'update', t: 'stop = true', n: '鍵を持って書く'}, A: {k: 'wait', t: 'is_stopped', n: 'lock で待機'}, B: {k: 'wait', t: 'is_stopped', n: 'lock で待機'}},
+        state: {lock: 'main', stop: 'true', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが stop に true を書く。corder 1 と corder 2 は lock の行で止まっているので、書き込みとぶつかることがない。'},
+      {cells: {M: {k: 'lock', t: 'unlock', n: '鍵を返す'}, A: {k: 'lock', t: 'lock', n: '鍵を取る'}, B: {k: 'wait', t: 'is_stopped', n: 'lock で待機'}},
+        state: {lock: 'corder 1', stop: 'true', alive: 'corder 1, corder 2'},
+        msg: 'main スレッドが鍵を返す。待っていた corder 1 が鍵を取る。corder 2 は、corder 1 が鍵を返すまで待ち続ける。'},
+      {cells: {M: {k: 'wait', t: 'join 2', n: '待機'}, A: {k: 'ok', t: 'true を読む', n: 'unlock → 終了'}, B: {k: 'lock', t: 'lock', n: '鍵を取る'}},
+        state: {lock: 'corder 2', stop: 'true', alive: 'corder 2'},
+        msg: 'main スレッドは join で corder 2 を待ち始める。corder 1 は true を読み、鍵を返してからループを抜ける。続いて corder 2 が鍵を取る。'},
+      {cells: {M: {k: 'wait', t: 'join 2', n: '待機'}, B: {k: 'ok', t: 'true を読む', n: 'unlock → 終了'}},
+        state: {lock: 'なし', stop: 'true', alive: 'なし'},
+        msg: 'corder 2 も true を読み、鍵を返してからループを抜ける。これで corder 1 と corder 2 の両方が終了した。'},
+      {cells: {M: {k: 'ok', t: 'join 完了', n: '2 → 1 の順'}},
+        state: {lock: 'なし', stop: 'true', alive: 'なし'},
+        mark: {alive: 'good'}, result: 'good',
+        msg: 'main スレッドの join は、corder 2 と corder 1 の両方について戻ってくる。main スレッドは malloc した領域を解放し、run_simulations は false を返して終わる。'}
+    ]
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>構造体の関係図: Codexion</title>
+<style>
+:root{
+  --bg:#f8fafc; --panel:#ffffff; --fg:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#c2410c; --accent-soft:#ffedd5;
+  --code-bg:#f1f5f9;
+  --check:#1d4ed8; --check-soft:#dbeafe;
+  --lock:#6d28d9;  --lock-soft:#ede9fe;
+  --ok:#15803d;    --ok-soft:#dcfce7;
+  --ng:#b91c1c;    --ng-soft:#fee2e2;
+  --shadow:0 1px 3px rgba(15,23,42,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+    --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+    --code-bg:#0b1220;
+    --check:#93c5fd; --check-soft:#1e3a8a;
+    --lock:#c4b5fd;  --lock-soft:#4c1d95;
+    --ok:#86efac;    --ok-soft:#14532d;
+    --ng:#fca5a5;    --ng-soft:#7f1d1d;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#fb923c; --accent-soft:#7c2d12;
+  --code-bg:#0b1220;
+  --check:#93c5fd; --check-soft:#1e3a8a;
+  --lock:#c4b5fd;  --lock-soft:#4c1d95;
+  --ok:#86efac;    --ok-soft:#14532d;
+  --ng:#fca5a5;    --ng-soft:#7f1d1d;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.85;font-size:15.5px}
+main{max-width:960px;margin:0 auto;padding:28px 16px 90px}
+h1{font-size:25px;margin:0 0 4px}
+h1 .accent{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted)}
+section{margin-top:44px}
+h2{font-size:20px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+h2 .no{color:var(--accent);margin-right:8px}
+h3{font-size:15.5px;margin:0 0 6px}
+p{margin:8px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;overflow-x:auto;font-size:13.5px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin:12px 0}
+.toc{font-size:14px}
+.toc ol{margin:6px 0 0;padding-left:22px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.theme-btn{position:fixed;top:12px;right:12px;font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;z-index:2}
+.note{font-size:13.5px;color:var(--muted)}
+.point{border-left:4px solid var(--accent);background:var(--accent-soft);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0}
+.scroll{overflow-x:auto}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--fg);cursor:pointer}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.msg{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--code-bg);border:1px solid var(--border);min-height:3.6em}
+
+/* ---- diagram ---- */
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--fg);font-family:inherit}
+#dg{min-width:840px}
+.box{cursor:pointer}
+.box .frame{fill:var(--panel);stroke:var(--border);stroke-width:2}
+.box .head{fill:var(--code-bg)}
+.box .title{font-size:14.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.box .fname{font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+.box .ftype{font-size:11.5px;fill:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.box .plan-row{fill:var(--accent-soft);opacity:.55}
+.box.sel .frame{stroke:var(--accent);stroke-width:3}
+.box.dim{opacity:.3}
+.edge{pointer-events:none}
+.edge path{fill:none;stroke-width:2.2}
+.edge text{font-size:12px;font-weight:700}
+.edge.embed path{stroke:var(--check)}
+.edge.embed text{fill:var(--check)}
+.edge.ptr path{stroke:var(--lock)}
+.edge.ptr text{fill:var(--lock)}
+.edge.num path{stroke:var(--muted);stroke-dasharray:3 4}
+.edge.num text{fill:var(--muted)}
+.edge.plan path{stroke:var(--accent);stroke-dasharray:8 5}
+.edge.plan text{fill:var(--accent)}
+.edge.dim{opacity:.12}
+.edge.hl path{stroke-width:3.6}
+.mk-embed{fill:var(--check)}
+.mk-ptr{fill:var(--lock)}
+.mk-plan{fill:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:28px;border-top:3px solid}
+.lg-embed i{border-color:var(--check)}
+.lg-ptr i{border-color:var(--lock)}
+.lg-num i{border-color:var(--muted);border-top-style:dotted}
+.lg-plan i{border-color:var(--accent);border-top-style:dashed}
+
+/* ---- kinds ---- */
+.kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:760px){.kinds{grid-template-columns:1fr}}
+.kind{border:2px solid var(--border);border-radius:12px;padding:12px;background:var(--panel)}
+.kind.embed{border-color:var(--check)}
+.kind.ptr{border-color:var(--lock)}
+.kind.num{border-color:var(--muted);border-style:dashed}
+.kind .tag{display:inline-block;font-size:12px;font-weight:700;padding:0 8px;border-radius:999px;margin-bottom:4px}
+.kind.embed .tag{background:var(--check-soft);color:var(--check)}
+.kind.ptr .tag{background:var(--lock-soft);color:var(--lock)}
+.kind.num .tag{background:var(--code-bg);color:var(--muted)}
+.kind pre{font-size:12.5px;margin:8px 0 0}
+
+table.t{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+table.t th,table.t td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg)}
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:4px}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" type="button">テーマ切替</button>
+<main>
+  <header>
+    <h1><span class="accent">構造体</span>どうしの関係図</h1>
+    <div class="meta">Codexion 用メモ ･ codexion.h の t_config / t_table / t_corder / t_request / t_dongle</div>
+  </header>
+
+  <div class="card toc">
+    <b>この資料の流れ</b>
+    <ol>
+      <li><a href="#s1">全体の関係図</a></li>
+      <li><a href="#s2">つながり方は3種類ある</a></li>
+      <li><a href="#s3">実体はいくつ作られるか</a></li>
+      <li><a href="#s4">スレッドから値までの辿り方</a></li>
+      <li><a href="#s5">予定の関係を追記するときの注意</a></li>
+    </ol>
+  </div>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2><span class="no">1</span>全体の関係図</h2>
+    <p>実線と点線は、今の codexion.h にすでに書かれている関係を表す。オレンジの破線は、これまでの相談で提案したが、まだ codexion.h に書かれていない関係を表す。</p>
+    <p>構造体の箱をクリックすると、その構造体につながる線が強調され、下に説明が出る。</p>
+    <div class="card">
+      <div class="ctrl">
+        <button class="btn" id="planBtn" type="button">予定の関係も表示する</button>
+      </div>
+      <div class="legend">
+        <span class="lg-embed"><i></i>埋め込み（中に丸ごと入っている）</span>
+        <span class="lg-ptr"><i></i>ポインタ（住所を持つ）</span>
+        <span class="lg-num"><i></i>番号で対応</span>
+        <span class="lg-plan"><i></i>予定（未追記）</span>
+      </div>
+      <div class="scroll"><svg id="dg" role="img" aria-label="5つの構造体の関係図"></svg></div>
+      <div class="msg" id="dgmsg">構造体の箱をクリックすると、その構造体の説明がここに出る。</div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2><span class="no">2</span>つながり方は3種類ある</h2>
+    <div class="kinds">
+      <div class="kind embed">
+        <span class="tag">埋め込み</span>
+        <h3>中に丸ごと入っている</h3>
+        <p>外側の構造体が、内側の構造体の実物をメンバとして直接持つ。外側を1つ作ると、内側も一緒に1つできる。</p>
+<pre><code>t_table.config      // t_config 1個
+t_dongle.queue[2]   // t_request 2個</code></pre>
+      </div>
+      <div class="kind ptr">
+        <span class="tag">ポインタ</span>
+        <h3>住所を持つ</h3>
+        <p>構造体は、相手の実物ではなく、相手が置かれている場所（アドレス）だけを持つ。何人の corder が同じ住所を持っても、相手の実物は1つのままである。</p>
+<pre><code>t_corder.table      // t_table の住所</code></pre>
+      </div>
+      <div class="kind num">
+        <span class="tag">番号で対応</span>
+        <h3>同じ番号を持つ</h3>
+        <p>t_request は corder の住所を持たず、corder の番号（id）だけを持つ。t_request.id と t_corder.id が同じ値なら、その申込書はその corder が出したものである。</p>
+<pre><code>t_request.id == t_corder.id</code></pre>
+      </div>
+    </div>
+    <div class="point">埋め込みとポインタの違いは、「書き換えが誰に見えるか」に表れる。t_table は1つしかなく、全 corder は同じ t_table の住所を持つ。そのため、main スレッドが t_table.stop を書き換えると、全 corder がその書き換えを見られる。</div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2><span class="no">3</span>実体はいくつ作られるか</h2>
+    <p>下の表の N は、引数で受け取った corder の人数（<code>number_of_coders</code>）を表す。</p>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>構造体</th><th>何の数に応じるか</th><th>実体の数</th><th>実体の置き場所</th></tr></thead>
+        <tbody>
+          <tr><td><code>t_table</code></td><td>人数に関係ない</td><td>1個</td><td>run_simulations が1つだけ用意する。</td></tr>
+          <tr><td><code>t_config</code></td><td>人数に関係ない</td><td>1個</td><td>t_table の中（<code>table.config</code>）に埋め込まれる。</td></tr>
+          <tr><td><code>t_corder</code></td><td>corder の人数</td><td>N 個</td><td>set_corders が malloc した配列。corder 1人につき1個で、スレッドも1本ずつ対応する。</td></tr>
+          <tr><td><code>t_dongle</code></td><td>corder の人数（円卓では、ドングルの本数が人数と同じになる）</td><td>N 個</td><td>ドングルの配列。corder と同じ人数分だけ作る。<span class="badge">予定</span></td></tr>
+          <tr><td><code>t_request</code></td><td>ドングルの本数 × 2</td><td>2 × N 個の枠</td><td>各 t_dongle の中の <code>queue[2]</code>。使われている枠の数は、各ドングルの <code>queue_size</code> が表す。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>t_dongle が N 本になる理由</h3>
+    <p>円卓では、隣り合う corder 2人の間にドングルが1本ずつ置かれる。N 人の corder が円に座ると、隣どうしの「間」も N か所できる。そのため、ドングルの本数も N 本になる。</p>
+    <h3>t_request が「枠」である理由</h3>
+    <p>各 t_dongle は、<code>queue[2]</code> として t_request を2個分の枠で持つ。ドングルが N 本あるので、枠は全部で 2 × N 個になる。ただし、枠の中で実際に申込書が入っている数は、各ドングルの <code>queue_size</code>（0〜2）が表す。</p>
+    <p class="note">今の main.c は、t_config を malloc で別に作っている。t_table ができたら、main.c が作った t_config の中身は、t_table の <code>config</code> にコピーされることになる。</p>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2><span class="no">4</span>スレッドから値までの辿り方</h2>
+    <p>各スレッドは、pthread_create の第4引数で受け取った住所1つから、必要な値まで矢印を辿っていく。</p>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>辿るスレッド</th><th>欲しい値</th><th>辿り方</th></tr></thead>
+        <tbody>
+          <tr><td>corder スレッド</td><td>コンパイルにかかる時間</td><td><code>corder-&gt;table-&gt;config.time_to_compile</code></td></tr>
+          <tr><td>corder スレッド</td><td>止まるべきか</td><td><code>is_stopped(corder-&gt;table)</code><br><span class="note">関数の中で <code>table-&gt;stop_mutex</code> を取ってから <code>table-&gt;stop</code> を読む。</span></td></tr>
+          <tr><td>corder スレッド</td><td>左のドングルの鍵 <span class="badge">予定</span></td><td><code>corder-&gt;left-&gt;mutex</code></td></tr>
+          <tr><td>monitor スレッド</td><td>i 番目の corder の最終コンパイル開始時刻 <span class="badge">予定</span></td><td><code>table-&gt;corders[i].last_compile_start</code></td></tr>
+          <tr><td>ドングルを渡す処理</td><td>次に渡す corder の番号</td><td><code>dongle-&gt;queue[0].id</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">ドットとアローの使い分け：左側が構造体の実物なら <code>.</code>（ドット）を使い、左側が構造体の住所（ポインタ）なら <code>-&gt;</code>（アロー）を使う。<code>table-&gt;config</code> の結果は t_config の実物なので、その続きは <code>.time_to_compile</code> になる。</p>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2><span class="no">5</span>予定の関係を追記するときの注意</h2>
+    <p>予定の関係を全部追記すると、t_table は t_corder の住所を持ち、t_corder も t_table の住所を持つ。2つの構造体が互いを指すので、どちらを先に定義しても、片方の名前がまだ宣言されていない状態になる。</p>
+    <p>この問題は、構造体の名前だけを先に宣言する「前方宣言」で解決できる。ポインタのメンバを書くだけなら、コンパイラは相手の中身を知らなくてよく、名前さえ知っていればよい。</p>
+<pre><code>typedef struct s_corder	t_corder;
+typedef struct s_dongle	t_dongle;
+
+typedef struct s_table
+{
+	t_config		config;
+	bool			stop;
+	pthread_mutex_t	stop_mutex;
+	t_corder		*corders;
+	t_dongle		*dongles;
+}	t_table;
+
+struct s_corder
+{
+	...
+};</code></pre>
+    <p class="note">前方宣言で typedef を済ませた構造体は、本体の定義で <code>typedef</code> を繰り返さず、<code>struct s_corder { ... };</code> の形で書く。</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs, parent, text){
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function $(id){ return document.getElementById(id); }
+
+  $('themeBtn').addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  /* ---------- structs ---------- */
+  var HEAD = 30, ROW = 22;
+  var S = {
+    config: {name: 't_config', x: 20, y: 40, w: 310, fields: [
+      ['number_of_coders', 'uintmax_t'], ['time_to_burnout', 'uintmax_t'], ['time_to_compile', 'uintmax_t'],
+      ['time_to_debug', 'uintmax_t'], ['time_to_refactor', 'uintmax_t'], ['number_of_compiles_required', ''],
+      ['dongle_cooldown', 'uintmax_t'], ['scheduler', 'char *']],
+      desc: 't_config は、コマンドライン引数8つから読み取った設定を持つ。t_config の実物は t_table の中に1つだけ埋め込まれ、全スレッドが読み取り専用で使う。t_config 自身は、他の構造体を指さない。'},
+    table: {name: 't_table', x: 390, y: 40, w: 240, fields: [
+      ['config', 't_config'], ['stop', 'bool'], ['stop_mutex', 'pthread_mutex_t'],
+      ['corders', 't_corder *', true], ['dongles', 't_dongle *', true]],
+      desc: 't_table は、円卓全体を表す。t_table は t_config を1つ埋め込み、全員で共有する stop と stop_mutex を持つ。予定では、t_table は corder の配列とドングルの配列の住所も持つ。'},
+    corder: {name: 't_corder', x: 730, y: 40, w: 270, fields: [
+      ['id', 'uintmax_t'], ['last_compile_start', 'long long'], ['compile_count', 'long long'],
+      ['table', 't_table *'], ['left', 't_dongle *', true], ['right', 't_dongle *', true]],
+      desc: 't_corder は、corder 1人の進み具合を持つ。t_corder は table に t_table の住所を持ち、その住所から設定と stop に辿り着く。予定では、t_corder は左右のドングルの住所（left と right）も持つ。'},
+    dongle: {name: 't_dongle', x: 390, y: 330, w: 240, fields: [
+      ['in_use', 'bool'], ['released_at', 'long long'], ['queue[2]', 't_request'],
+      ['queue_size', 'int'], ['next_seq', 'uintmax_t'], ['mutex', 'pthread_mutex_t'], ['cond', 'pthread_cond_t']],
+      desc: 't_dongle は、ドングル1本の状態を持つ。t_dongle は t_request を2個（queue[2]）埋め込み、待っている corder の申込書をそこに並べる。'},
+    request: {name: 't_request', x: 730, y: 400, w: 270, fields: [
+      ['id', 'uintmax_t'], ['deadline', 'long long'], ['seq', 'uintmax_t']],
+      desc: 't_request は、corder がドングルに出す申込書1枚を表す。t_request は corder の住所を持たず、corder の番号（id）だけを持つ。t_request.id と同じ id を持つ t_corder が、その申込書の出し主である。'}
+  };
+  S.config.fields[5][1] = 'uintmax_t';
+
+  function visibleFields(s, plan){ return s.fields.filter(function(f){ return plan || !f[2]; }); }
+  function rowY(key, field, plan){
+    var s = S[key], fs = visibleFields(s, plan);
+    for (var i = 0; i < fs.length; i++) if (fs[i][0] === field) return s.y + HEAD + i * ROW + ROW / 2;
+    return null;
+  }
+  function boxH(key, plan){ return HEAD + visibleFields(S[key], plan).length * ROW + 6; }
+
+  /* ---------- edges ---------- */
+  function edges(plan){
+    var tH = boxH('table', plan), cH = boxH('corder', plan);
+    var MIDX = (S.table.x + S.table.w + S.corder.x) / 2, NUMX = S.corder.x + S.corder.w - 50;
+    var list = [
+      {kind: 'embed', from: 'table', to: 'config', label: '埋め込み', lx: (S.config.x + S.config.w + S.table.x) / 2, ly: rowY('table', 'config', plan) - 8,
+        d: 'M' + S.table.x + ',' + rowY('table', 'config', plan) + ' H' + (S.config.x + S.config.w), start: 'embed'},
+      {kind: 'ptr', from: 'corder', to: 'table', label: 'ポインタ', lx: MIDX + 10, ly: S.table.y + 8,
+        d: 'M' + S.corder.x + ',' + rowY('corder', 'table', plan) + ' H' + (MIDX + 10) + ' V' + (S.table.y + 15) + ' H' + (S.table.x + S.table.w + 2), end: 'ptr'},
+      {kind: 'embed', from: 'dongle', to: 'request', label: '埋め込み ×2', lx: MIDX, ly: rowY('dongle', 'queue[2]', plan) - 8,
+        d: 'M' + (S.dongle.x + S.dongle.w) + ',' + rowY('dongle', 'queue[2]', plan) + ' H' + S.request.x, start: 'embed'},
+      {kind: 'num', from: 'request', to: 'corder', label: 'id が同じ番号', lx: NUMX - 8, lanchor: 'end', ly: (S.corder.y + cH + S.request.y) / 2,
+        d: 'M' + NUMX + ',' + S.request.y + ' V' + (S.corder.y + cH)}
+    ];
+    if (plan){
+      list.push(
+        {kind: 'plan', from: 'table', to: 'dongle', label: 'dongles', lx: S.table.x + 40, lanchor: 'start', ly: (S.table.y + tH + S.dongle.y) / 2,
+          d: 'M' + (S.table.x + 30) + ',' + (S.table.y + tH) + ' V' + (S.dongle.y - 2), end: 'plan'},
+        {kind: 'plan', from: 'table', to: 'corder', label: 'corders', lx: (MIDX - 10 + S.corder.x) / 2, ly: rowY('corder', 'left', plan) + 18,
+          d: 'M' + (S.table.x + S.table.w) + ',' + rowY('table', 'corders', plan) + ' H' + (MIDX - 10) + ' V' + rowY('corder', 'left', plan) + ' H' + (S.corder.x - 2), end: 'plan'},
+        {kind: 'plan', from: 'corder', to: 'dongle', label: 'left / right', lx: S.corder.x + 68, lanchor: 'start', ly: S.dongle.y + 8,
+          d: 'M' + (S.corder.x + 60) + ',' + (S.corder.y + cH) + ' V' + (S.dongle.y + 15) + ' H' + (S.dongle.x + S.dongle.w + 2), end: 'plan'}
+      );
+    }
+    return list;
+  }
+
+  var plan = false, sel = null;
+  var svg = $('dg');
+
+  function render(){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var H = Math.max(S.dongle.y + boxH('dongle', plan), S.request.y + boxH('request', plan)) + 20;
+    svg.setAttribute('viewBox', '0 0 1020 ' + H);
+    var defs = el('defs', {}, svg);
+    ['ptr', 'plan'].forEach(function(k){
+      var m = el('marker', {id: 'arr-' + k, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse'}, defs);
+      el('path', {d: 'M0,0 L10,5 L0,10 z', 'class': 'mk-' + k}, m);
+    });
+    var dm = el('marker', {id: 'dia-embed', viewBox: '0 0 16 10', refX: 16, refY: 5, markerWidth: 14, markerHeight: 10, orient: 'auto-start-reverse'}, defs);
+    el('path', {d: 'M0,5 L8,0 L16,5 L8,10 z', 'class': 'mk-embed'}, dm);
+
+    var related = {};
+    var es = edges(plan);
+    var edgeLayer = el('g', {});
+    es.forEach(function(e){
+      var on = !sel || e.from === sel || e.to === sel;
+      if (sel && on){ related[e.from] = true; related[e.to] = true; }
+      var g = el('g', {'class': 'edge ' + e.kind + (sel ? (on ? ' hl' : ' dim') : '')}, edgeLayer);
+      var attrs = {d: e.d};
+      if (e.end) attrs['marker-end'] = 'url(#arr-' + e.end + ')';
+      if (e.start) attrs['marker-start'] = 'url(#dia-' + e.start + ')';
+      el('path', attrs, g);
+      el('text', {x: e.lxo || e.lx, y: e.ly, 'text-anchor': e.lanchor || 'middle'}, g, e.label);
+    });
+    if (sel) related[sel] = true;
+
+    Object.keys(S).forEach(function(key){
+      var s = S[key], fs = visibleFields(s, plan), h = boxH(key, plan);
+      var g = el('g', {'class': 'box' + (sel === key ? ' sel' : '') + (sel && !related[key] ? ' dim' : ''), tabindex: 0, role: 'button', 'aria-label': s.name}, svg);
+      el('rect', {x: s.x, y: s.y, width: s.w, height: h, rx: 10, 'class': 'frame'}, g);
+      el('rect', {x: s.x + 1, y: s.y + 1, width: s.w - 2, height: HEAD - 2, rx: 9, 'class': 'head'}, g);
+      el('text', {x: s.x + 12, y: s.y + 20, 'class': 'title'}, g, s.name);
+      fs.forEach(function(f, i){
+        var y = s.y + HEAD + i * ROW;
+        if (f[2]) el('rect', {x: s.x + 4, y: y + 1, width: s.w - 8, height: ROW - 2, rx: 4, 'class': 'plan-row'}, g);
+        el('text', {x: s.x + 12, y: y + 15, 'class': 'fname'}, g, f[0]);
+        el('text', {x: s.x + s.w - 10, y: y + 15, 'text-anchor': 'end', 'class': 'ftype'}, g, f[1]);
+      });
+      function pick(){
+        sel = sel === key ? null : key;
+        $('dgmsg').textContent = sel ? s.desc : '構造体の箱をクリックすると、その構造体の説明がここに出る。';
+        render();
+      }
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); pick(); } });
+    });
+    svg.appendChild(edgeLayer);
+  }
+
+  $('planBtn').addEventListener('click', function(){
+    plan = !plan;
+    this.classList.toggle('on', plan);
+    this.textContent = plan ? '予定の関係を隠す' : '予定の関係も表示する';
+    render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
