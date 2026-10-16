@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:29:59 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/02 17:13:31 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/13 01:13:41 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,20 +22,22 @@ bool	is_scheduler(char *str)
 
 bool	set_num(char *str, uintmax_t *num)
 {
-	int	result;
-	int	i;
+	uintmax_t	result;
+	uintmax_t	i;
 
+	if (str[0] == '\0')
+		return (fprintf(stderr, "Error: argument is empty\n"), false);
 	result = 0;
 	i = 0;
 	while (str[i])
 	{
 		if (str[i] >= '0' && str[i] <= '9')
 		{
-			if (result > UINTMAX_MAX - (str[i] - '0') / 10)
-				result += result * 10 + (str[i] - '0');
-			else
+			if (result > (UINTMAX_MAX - (str[i] - '0')) / 10)
 				return (
 					fprintf(stderr, "Error: argument is too large\n"), false);
+			else
+				result = result * 10 + (str[i] - '0');
 		}
 		else
 			return (fprintf(stderr, "Error: argument is not digit\n"), false);
@@ -58,17 +60,14 @@ bool	set_scheduler(char *src, char *dst)
 	return (true);
 }
 
-void	free_all(int count, ...)
+/* 呼び出したスレッドに、1970年1月1日0時0分0秒（UTC）から
+** 呼び出した瞬間までの経過時間を ms 単位の整数で返す関数 */
+long long	get_time_ms(void)
 {
-	va_list	args;
-	int		i;
-
-	va_start(args, count);
-	i = 0;
-	while (i < count)
-	{
-		free(va_arg(args, void *));
-		i++;
-	}
-	va_end(args);
+	/* 1970年1月1日0時0分0秒（UTC）から gettimeofday() を
+	** 呼んだ瞬間までの経過時間を受け取るための入れ物。*/
+	struct timeval	tv;
+	
+	gettimeofday(&tv, NULL);
+	return ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
