@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:07:57 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/13 16:47:37 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/17 12:13:56 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 # include <stdarg.h>
 # include <string.h>
 # include <stdbool.h>
+# include <unistd.h>
 # include <pthread.h>
 # include <sys/time.h>
 
