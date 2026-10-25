@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:29:59 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/13 01:13:41 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/25 20:19:10 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,4 +70,18 @@ long long	get_time_ms(void)
 	
 	gettimeofday(&tv, NULL);
 	return ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void	set_dongle_order(t_corder *corder, t_dongle **first, t_dongle **second)
+{
+	if (corder->id % 2 == 0)
+	{
+		*first = corder->right;
+		*second = corder->left;
+	}
+	else
+	{
+		*first = corder->left;
+		*second = corder->right;
+	}
 }

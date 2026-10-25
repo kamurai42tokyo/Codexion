@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:07:57 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/17 12:13:56 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/25 20:01:13 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ typedef struct s_table	t_table;
 */
 typedef struct s_config
 {
-	uintmax_t	number_of_coders;				// corder の人数
+	uintmax_t	number_of_corders;				// corder の人数
 	uintmax_t	time_to_burnout;				// 燃え尽きまでの時間(ms)
 	uintmax_t	time_to_compile;				// コンパイル時間(ms)
 	uintmax_t	time_to_debug;					// デバッグ時間(ms)
@@ -82,8 +82,8 @@ typedef struct s_corder
 	uintmax_t		compile_count;				// コンパイルを終えた回数
 	pthread_mutex_t	mutex;						// 上の値を守る鍵
 	t_table			*table;						// 円卓の住所
-	t_dongle		*left;						// 左のドングル
 	t_dongle		*right;						// 右のドングル
+	t_dongle		*left;						// 左のドングル
 }	t_corder;
 
 /*
@@ -91,7 +91,7 @@ typedef struct s_corder
 ** 個数: 1個。run_simulations が用意する。
 ** 共有: 全スレッドが読む。stop だけは書き換わるため stop_mutex で守る。
 */
-struct s_table
+typedef struct s_table
 {
 	t_config		config;						// 引数の設定(読み取り専用)
 	t_dongle		*dongles;					// ドングルの配列
@@ -100,7 +100,8 @@ struct s_table
 	bool			stop;						// true で全員停止
 	pthread_mutex_t	stop_mutex;					// stop を守る鍵
 	pthread_mutex_t	log_mutex;					// ログ出力を守る鍵
-};
+}	t_table;
+
 
 bool		is_scheduler(char *str);
 bool		set_num(char *str, uintmax_t *num);
@@ -115,5 +116,6 @@ bool    	set_table(t_table **table, t_config config);
 long long	get_time_ms(void);
 void		*run_simulation(void *arg);
 void 		*monitor_routine(void *arg);
+void		submit_request(t_corder *corder, t_dongle *dongle);
 
 #endif

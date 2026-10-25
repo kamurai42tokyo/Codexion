@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 23:11:31 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/13 00:27:42 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/25 20:04:43 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,17 +33,17 @@ bool	set_dongles(t_table *table)
     uintmax_t	i;
 
     config = table->config;
-    dongles = malloc(sizeof(t_dongle) * config.number_of_coders);
+    dongles = malloc(sizeof(t_dongle) * config.number_of_corders);
     if (dongles == NULL)
         return (false);
     i = 0;
-    while (i < config.number_of_coders)
+    while (i < config.number_of_corders)
     {
         dongles[i].in_use = false;
         dongles[i].released_at = 0;
         set_request_queue(dongles[i].request_queue);
         dongles[i].request_count = 0;
-        dongles[i].next_arrival_order = 0;
+        dongles[i].next_arrival_order = 1;
         if (pthread_mutex_init(&dongles[i].mutex, NULL) != 0)
             return (destroy_dongle_mutexes(dongles, i), free(dongles), false);
         if (pthread_cond_init(&dongles[i].cond, NULL) != 0)
@@ -72,8 +72,8 @@ bool	set_corders(t_table *table)
 		corders[i].last_compile_start = 0;
 		corders[i].compile_count = 0;
         corders[i].table = table;
-        corders[i].left = &table->dongles[i];
-        corders[i].right = &table->dongles[(i + 1) % number_of_coders];
+        corders[i].right = &(table->dongles[i]);
+        corders[i].left = &(table->dongles[(i + 1) % number_of_coders]);
         if (pthread_mutex_init(&corders[i].mutex, NULL) != 0)
             return (destroy_corder_mutexes(corders, i), free(corders), false);
 		i++;

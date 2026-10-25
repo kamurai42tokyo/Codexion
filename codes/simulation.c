@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/01 04:10:14 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/12 20:40:26 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/25 13:27:40 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,20 +74,20 @@ bool	run_simulations(t_config config)
 		return (false);
 	
 	// スレッドの作成
-	simulate_threads = malloc(sizeof(pthread_t) * config.number_of_coders);
+	simulate_threads = malloc(sizeof(pthread_t) * config.number_of_corders);
 	if (simulate_threads == NULL)
 		return (free(simulate_threads), free_table(table), false);
 
 	// スレッド開始直前の時刻を記録
-	set_start_time(table, config.number_of_coders);
+	set_start_time(table, config.number_of_corders);
 			
 	// スレッドの作成
 	if (create_threads(table, simulate_threads,
-		&monitor_thread, config.number_of_coders) == false)
+		&monitor_thread, config.number_of_corders) == false)
 		return (free(simulate_threads), free_table(table), false);
 
 	// スレッドを開始して終わるまで待つ
-	join_threads(simulate_threads, monitor_thread, config.number_of_coders);
+	join_threads(simulate_threads, monitor_thread, config.number_of_corders);
 	
 	return (free(simulate_threads), free_table(table), true);
 }
