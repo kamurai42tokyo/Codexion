@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/12 20:26:40 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/17 12:15:17 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/10/23 16:48:38 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,25 +25,34 @@ static bool	is_stopped(t_table *table)
 ** ① corder->left が指すドングルの in_use を true にする（mutex で守る）。
 **    ※円卓にあるのはこれ一本のみ。mutex は握りっぱなしにしない。
 ** ② “<時刻> <id> has taken a dongle” というログを出力
-** ③ stop=true になるまで、「stop を見る → まだ false なら少し寝る → また見る」
+** ③ stop=true になるまで、「stop を見る → まだ false なら少し待機 → また見る」
 **    を繰り返す。※stop=true になったら抜ける。
 ** ④ ドングルの in_use を false に戻す（mutex で守る）。
 ** ⑤ NULL を返して終わる。 */
 static void	*run_simulation_when_one_corder(t_corder *corder)
 {
+    // ①
 	pthread_mutex_lock(&corder->left->mutex);
 	corder->left->in_use = true;
 	pthread_mutex_unlock(&corder->left->mutex);
+    
+    // ②
 	pthread_mutex_lock(&corder->table->log_mutex);
 	fprintf(stdout, "%lld ", get_time_ms() - corder->table->start_time);
 	fprintf(stdout, "%ju ", corder->id);
 	fprintf(stdout, "has taken a dongle\n");
 	pthread_mutex_unlock(&corder->table->log_mutex);
+    
+    // ③
 	while (!is_stopped(corder->table))
 		usleep(500);
+    
+    // ④
 	pthread_mutex_lock(&corder->left->mutex);
 	corder->left->in_use = false;
 	pthread_mutex_unlock(&corder->left->mutex);
+    
+    // ⑤
 	return (NULL);
 }
 
@@ -70,12 +79,23 @@ void	*run_simulation(void *arg)
 	// corderが１人だけ（=ドングルも１本だけ）の場合
 	if (config->number_of_coders == 1)
 		return (run_simulation_when_one_corder(corder));
-	// 
-	while (1)
-	{
-		
-		 
-	}
+
+	// 左のドングルへ申請書を出す
+    pthread_mutex_lock(&corder->left->mutex);
+    if (corder->right->request_count >= 2)
+        pthread_mutex_unlock(&corder->left->mutex);
+    else
+    {
+        corder->left->request_queue[corder->left->request_count + 1].id = corder->id;
+    }
+    
+    // 右のドングルへ申請書を出す
+    pthread_mutex_lock(&corder->right->mutex);
+    if (corder->right->request_count >= 2)
+        pthread_mutex_unlock(&corder->right->mutex);
+	
+    // 
+    
 }
 
 /* シミュレーションが終わるまで全corderを短い間隔で順番に見て回る。
