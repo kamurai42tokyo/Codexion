@@ -1,17 +1,42 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   tools.c                                            :+:      :+:    :+:   */
+/*   parse.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/29 01:29:59 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/25 20:19:10 by kamurai          ###   ########.fr       */
+/*   Created: 2026/11/02 14:44:55 by kamurai           #+#    #+#             */
+/*   Updated: 2026/11/02 14:46:32 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-#include <stdarg.h>
+
+t_config	*set_data(char **argv)
+{
+	t_config	*data;
+
+	data = malloc(sizeof(t_config));
+	if (data == NULL)
+		return (NULL);
+
+	data->scheduler = malloc(sizeof(char) * (strlen(argv[8]) + 1));
+	if (data->scheduler == NULL || is_scheduler(argv[8]) == false)
+		return (free_all(2, data, data->scheduler), NULL);
+
+	if (set_num(argv[1], &data->number_of_coders) == false
+		|| data->number_of_coders == 0
+		|| set_num(argv[2], &data->time_to_burnout) == false
+		|| set_num(argv[3], &data->time_to_compile) == false
+		|| set_num(argv[4], &data->time_to_debug) == false
+		|| set_num(argv[5], &data->time_to_refactor) == false
+		|| set_num(argv[6], &data->number_of_compiles_required) == false
+		|| set_num(argv[7], &data->dongle_cooldown) == false
+		|| set_scheduler(argv[8], data->scheduler) == false)
+		return (free_all(2, data, data->scheduler), NULL);
+
+	return (data);
+}
 
 bool	is_scheduler(char *str)
 {
@@ -58,30 +83,4 @@ bool	set_scheduler(char *src, char *dst)
 	}
 	dst[i] = '\0';
 	return (true);
-}
-
-/* 呼び出したスレッドに、1970年1月1日0時0分0秒（UTC）から
-** 呼び出した瞬間までの経過時間を ms 単位の整数で返す関数 */
-long long	get_time_ms(void)
-{
-	/* 1970年1月1日0時0分0秒（UTC）から gettimeofday() を
-	** 呼んだ瞬間までの経過時間を受け取るための入れ物。*/
-	struct timeval	tv;
-	
-	gettimeofday(&tv, NULL);
-	return ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
-}
-
-void	set_dongle_order(t_corder *corder, t_dongle **first, t_dongle **second)
-{
-	if (corder->id % 2 == 0)
-	{
-		*first = corder->right;
-		*second = corder->left;
-	}
-	else
-	{
-		*first = corder->left;
-		*second = corder->right;
-	}
 }

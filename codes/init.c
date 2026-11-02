@@ -33,11 +33,11 @@ bool	set_dongles(t_table *table)
     uintmax_t	i;
 
     config = table->config;
-    dongles = malloc(sizeof(t_dongle) * config.number_of_corders);
+    dongles = malloc(sizeof(t_dongle) * config.number_of_coders);
     if (dongles == NULL)
         return (false);
     i = 0;
-    while (i < config.number_of_corders)
+    while (i < config.number_of_coders)
     {
         dongles[i].in_use = false;
         dongles[i].released_at = 0;
@@ -55,30 +55,30 @@ bool	set_dongles(t_table *table)
     return (true);
 }
 
-bool	set_corders(t_table *table)
+bool	set_coders(t_table *table)
 {
-	t_corder	*corders;
+	t_coder	*coders;
     uintmax_t   number_of_coders;
     uintmax_t   i;
 
     number_of_coders = (table->config).number_of_coders;
-	corders = malloc(sizeof(t_corder) * number_of_coders);
-	if (corders == NULL)
+	coders = malloc(sizeof(t_coder) * number_of_coders);
+	if (coders == NULL)
 		return (false);
 	i = 0;
 	while (i < number_of_coders)
 	{
-		corders[i].id = i + 1;
-		corders[i].last_compile_start = 0;
-		corders[i].compile_count = 0;
-        corders[i].table = table;
-        corders[i].right = &(table->dongles[i]);
-        corders[i].left = &(table->dongles[(i + 1) % number_of_coders]);
-        if (pthread_mutex_init(&corders[i].mutex, NULL) != 0)
-            return (destroy_corder_mutexes(corders, i), free(corders), false);
+		coders[i].id = i + 1;
+		coders[i].last_compile_start = 0;
+		coders[i].compile_count = 0;
+        coders[i].table = table;
+        coders[i].right = &(table->dongles[i]);
+        coders[i].left = &(table->dongles[(i + 1) % number_of_coders]);
+        if (pthread_mutex_init(&coders[i].mutex, NULL) != 0)
+            return (destroy_coder_mutexes(coders, i), free(coders), false);
 		i++;
 	}
-    table->corders = corders;
+    table->coders = coders;
 	return (true);
 }
 
@@ -98,7 +98,7 @@ bool    set_table(t_table **table, t_config config)
             free(new_table), false);
     if (set_dongles(new_table) == false)
         return (destroy_table_mutexes(new_table), free(new_table), false);
-    if (set_corders(new_table) == false)
+    if (set_coders(new_table) == false)
         return (
             destroy_dongle_mutexes(
                 new_table->dongles, config.number_of_coders),

@@ -20,7 +20,7 @@ static void	set_start_time(t_table *table, uintmax_t number_of_coders)
 	table->start_time = get_time_ms();
 	i = 0;
 	while (i < number_of_coders)
-		table->corders[i++].last_compile_start = table->start_time;
+		table->coders[i++].last_compile_start = table->start_time;
 }
 
 // スレッドの作成
@@ -33,7 +33,7 @@ static bool	create_threads(t_table *table, pthread_t *simulate_threads,
 	while (i < number_of_coders)
 	{
 		if (pthread_create(&simulate_threads[i],
-			NULL, run_simulation, &table->corders[i]) != 0)
+			NULL, run_simulation, &table->coders[i]) != 0)
 			break;
 		i++;
 	}
@@ -65,7 +65,7 @@ static void	join_threads(pthread_t *simulate_threads,
 /* すべてのスレッドを作成/監視/制御する */
 bool	run_simulations(t_config config)
 {
-	t_table		*table;				// corder と dongle が囲む円卓
+	t_table		*table;				// coder と dongle が囲む円卓
 	pthread_t	*simulate_threads;	// シミュレート用スレッド（number_of_coders個）
 	pthread_t	monitor_thread;		// マルチスレッド全体の状態を監視するためのスレッド（1個）
 
@@ -74,20 +74,20 @@ bool	run_simulations(t_config config)
 		return (false);
 	
 	// スレッドの作成
-	simulate_threads = malloc(sizeof(pthread_t) * config.number_of_corders);
+	simulate_threads = malloc(sizeof(pthread_t) * config.number_of_coders);
 	if (simulate_threads == NULL)
 		return (free(simulate_threads), free_table(table), false);
 
 	// スレッド開始直前の時刻を記録
-	set_start_time(table, config.number_of_corders);
+	set_start_time(table, config.number_of_coders);
 			
 	// スレッドの作成
 	if (create_threads(table, simulate_threads,
-		&monitor_thread, config.number_of_corders) == false)
+		&monitor_thread, config.number_of_coders) == false)
 		return (free(simulate_threads), free_table(table), false);
 
 	// スレッドを開始して終わるまで待つ
-	join_threads(simulate_threads, monitor_thread, config.number_of_corders);
+	join_threads(simulate_threads, monitor_thread, config.number_of_coders);
 	
 	return (free(simulate_threads), free_table(table), true);
 }

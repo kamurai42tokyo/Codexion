@@ -6,7 +6,7 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 13:37:49 by kamurai           #+#    #+#             */
-/*   Updated: 2026/10/25 20:04:33 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/11/02 15:03:52 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,9 @@ bool	is_stopped(t_table *table)
 	return (pthread_mutex_unlock(&table->stop_mutex), true);
 }
 
-bool	is_my_turn(t_corder *corder, t_dongle *dongle)
+void	stop_simulation(t_table *table)
 {
-	
+    pthread_mutex_lock(&(table->stop_mutex));
+    table->stop = true;
+    pthread_mutex_unlock(&(table->stop_mutex));
 }

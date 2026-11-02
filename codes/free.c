@@ -37,10 +37,10 @@ void    destroy_dongle_mutexes(t_dongle *dongles, uintmax_t count)
     }
 }
 
-void    destroy_corder_mutexes(t_corder *corders, uintmax_t count)
+void    destroy_coder_mutexes(t_coder *coders, uintmax_t count)
 {
     while (count > 0)
-        pthread_mutex_destroy(&corders[--count].mutex);
+        pthread_mutex_destroy(&coders[--count].mutex);
 }
 
 void	destroy_table_mutexes(t_table *table)
@@ -55,7 +55,7 @@ void    free_table(t_table *table)
 
     count = table->config.number_of_coders;
     destroy_dongle_mutexes(table->dongles, count);
-    destroy_corder_mutexes(table->corders, count);
+    destroy_coder_mutexes(table->coders, count);
     destroy_table_mutexes(table);
-    free_all(3, table->dongles, table->corders, table);
+    free_all(3, table->dongles, table->coders, table);
 }
