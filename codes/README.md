@@ -107,8 +107,12 @@ Example:
 ./codexion 4 800 200 200 200 3 10 edf
 ```
 
-All numeric arguments must be non-negative integers. If an argument is missing
-or invalid, the program exits with status `1`.
+All numeric arguments must be written with digits only (no sign), and must be
+between `0` and `INT_MAX` (`2147483647`). `number_of_coders` must be `1` or more.
+If the number of arguments is wrong or an argument is invalid, the program
+prints an error message on the standard error output and exits with status `1`.
+If `number_of_compiles_required` is `0`, every coder has already reached the
+goal, so the program exits with status `0` without printing any log.
 
 ### Output
 
@@ -240,7 +244,9 @@ needs no lock.
   and the monitor reads it under the same mutex. The monitor therefore never
   reads a half-written value.
 - **Stop flag**: every read of `stop` goes through `is_stopped()`, and every
-  write goes through `stop_simulation()`. Both functions take `stop_mutex`.
+  write is done under `stop_mutex`. Coders and the monitor write it through
+  `stop_simulation()`, and the main thread writes it directly under
+  `stop_mutex` only when thread creation fails.
 
 ### Communication between coders and the monitor
 
@@ -250,6 +256,52 @@ needs no lock.
 - **Monitor to coders**: the monitor sets `stop` under `stop_mutex`. Coders
   check `stop` through `is_stopped()` every 100 µs while waiting for dongles
   and every 500 µs while working, so they leave their loop soon after.
+
+</details>
+
+## Choice of data types
+
+<details>
+<summary>Click to expand</summary>
+
+The types follow three rules.
+
+- **Timestamps and durations (ms)**: `long long`
+- **Counts and coder numbers**: `int`
+- **Flags with two states**: `bool`
+
+### Timestamps and durations: `long long`
+
+| Members | Reason |
+|---|---|
+| `start_time`, `last_compile_start`, `released_at`, `deadline` | They are built from `gettimeofday()` as milliseconds since 1970 (about `1,700,000,000,000`), which does not fit in an `int`. A signed type is used because differences such as `get_time_ms() - released_at` are computed |
+| `time_to_burnout`, `time_to_compile`, `time_to_debug`, `time_to_refactor`, `dongle_cooldown` | They are added to or compared with timestamps (`deadline = last_compile_start + time_to_burnout`, `elapsed < dongle_cooldown`). Using the same signed type as the timestamps avoids mixing signed and unsigned values, which would silently turn a negative value into a huge positive one |
+
+The input is limited to `INT_MAX`, so `timestamp + duration` stays far below
+the maximum of `long long` (about `9.2 * 10^18`) and never overflows.
+
+### Counts and coder numbers: `int`
+
+| Members | Reason |
+|---|---|
+| `number_of_coders`, `number_of_compiles_required` | The number of coders is limited by the number of threads the OS allows (tens of thousands), and a realistic number of compiles is also far below `INT_MAX`, so `int` is large enough. The parser rejects values above `INT_MAX` to guarantee that they fit |
+| `id` (in `t_coder` and `t_request`) | Coder numbers range from `1` to `number_of_coders`, so they fit in the same type as `number_of_coders` |
+| `compile_count` | It is compared with `number_of_compiles_required`, so it uses the same type |
+| `request_count` | It is the number of requests in a queue, from `0` to `2` |
+
+A signed type is used so that expressions such as `count - 1` or `i - 1`
+never wrap around to a huge value.
+
+### Other members
+
+| Members | Type | Reason |
+|---|---|---|
+| `in_use`, `stop` | `bool` | They only have two states |
+| `scheduler` | `char *` | It is a copy of the argument `fifo` or `edf`, compared with `strcmp` |
+| `request_queue` | `t_request[2]` | A dongle is shared by at most two coders, so at most two requests wait |
+| `mutex`, `stop_mutex`, `log_mutex` | `pthread_mutex_t` | The subject requires a mutex to protect shared data |
+| `dongles`, `coders` | pointer | Arrays allocated with `malloc` because their size is known only at run time |
+| `table`, `right`, `left` | pointer | Several threads share the same object, so each coder points to it instead of copying it |
 
 </details>
 

@@ -100,8 +100,12 @@ Makefile は `cc -Wall -Wextra -Werror -pthread` でソースをコンパイル�
 ./codexion 4 800 200 200 200 3 10 edf
 ```
 
-数値の引数は、すべて0以上の整数でなければならない。引数が足りない場合や不正な場合、
-プログラムは終了ステータス `1` で終わる。
+数値の引数は、すべて数字だけ（符号なし）で書き、`0` 以上 `INT_MAX`（`2147483647`）以下で
+なければならない。`number_of_coders` は `1` 以上でなければならない。
+引数の数が違う場合や不正な引数がある場合、プログラムは標準エラー出力にエラーメッセージを出し、
+終了ステータス `1` で終わる。
+`number_of_compiles_required` が `0` の場合、全 coder がすでに目標に達しているため、
+プログラムはログを出さずに終了ステータス `0` で終わる。
 
 ### ログの出力
 
@@ -129,22 +133,40 @@ subject が定めるログは次の5種類のみ。
 ### 1. デッドロック（全員が待ち合って止まる）
 
 - 問題: 全員が同時に左のドングルを取ると、全員が右のドングルを待ったまま止まる。
-- 対策: 奇数番の coder は左から、偶数番の coder は右からドングルを取る。
-- 効果: 隣り合う2人が同じドングルを取り合うため、「全員が1本ずつ持って待つ」輪ができない。
+- 対策: coder は、2本のドングルが両方とも空いているときだけ、2本を同時に取る。
+  2本のドングルの mutex は、常に決まった順番（アドレスが小さい方から）でロックする。
+- 効果: 1本を持ったままもう1本を待つ coder がいない（「保持と待機」が起きない）。
+  また、ロックの順番が決まっているため、スレッドが互いの mutex を待つ輪ができない
+  （「循環待ち」が起きない）。
 
 ### 2. 飢餓（特定の coder だけ順番が回ってこない）
 
 - 問題: 同じ coder ばかりがドングルを取ると、隣の coder が燃え尽きる。
-- 対策: 各ドングルは申込書の待ち行列を持ち、決まった順番でドングルを渡す。
+- 対策: 各ドングルは申請の待ち行列を持ち、決まった順番でドングルを渡す。
+  coder は同じ申請を2本のドングルの待ち行列に同時に入れ、両方の待ち行列で先頭になったときだけ
+  ドングルを取る。
   - fifo: 先に申し込んだ coder に渡す。
-  - edf: 燃え尽きの期限が近い coder に渡す。期限が同じなら、先に申し込んだ coder に渡す。
+    開始時、偶数番の coder は最初の申請の前に `time_to_compile / 2` ms 待つ。
+    このため、各待ち行列の先頭は必ず奇数番の coder になる。
+    この待ちがないと、coder が番号順（1, 2, 3, ...）に申請することがあり、各 coder が1つ前の
+    coder を待つことになって、同時に1人しかコンパイルできなくなる。
+    この待ちの間、偶数番の coder のドングルはどのみち奇数番の coder が使っているため、
+    偶数番の coder が不利になることはない。
+  - edf: 燃え尽きの期限が近い coder に渡す。
+    期限が同じなら奇数番を優先し、それも同じなら番号が小さい方を優先する。
+    開始時は全員の期限が同じため、1人ずつではなく、奇数番の coder が先に、
+    偶数番の coder が次にコンパイルする。
 - 効果: コンパイルを終えたばかりの coder は、待っている隣の coder を追い越せない。
+  すべての待ち行列が同じ順番を使うため、「ある待ち行列では先頭だが、もう一方では2番目」という
+  状態が輪のようにつながることはない。
 
 ### 3. クールダウン（返却直後のドングルは使えない）
 
-- 問題: クールダウン明けには誰も合図を送らないため、`pthread_cond_wait` で眠った coder は起きられない。
-- 対策: coder は `pthread_cond_timedwait` に「クールダウンが明ける時刻」を渡して眠る。
-- 効果: coder は「合図が来る」か「クールダウンが明ける」かの早い方で起きる。
+- 問題: 返されたドングルは、`dongle_cooldown` ミリ秒が経つまで再び取られてはならない。
+- 対策: 各ドングルは `released_at`（返された時刻）を記録する。ドングルが空いているとみなすのは、
+  `in_use` が `false` で、かつ `released_at` から `dongle_cooldown` ms 経っているときだけである。
+- 効果: 待っている coder は 100µs ごとにドングルを確認し直すため、
+  クールダウンの終わりに約 0.1ms 以内で気づける。
 
 ### 4. 燃え尽きの検出（10ms 以内に知らせる）
 
@@ -156,8 +178,7 @@ subject が定めるログは次の5種類のみ。
 |---|---|---|
 | monitor | 10ms | 1ms |
 | 作業中の coder | 約 1ms | 500µs ずつ |
-| ドングル待ちの coder | 決めない（合図で起きる） | `pthread_cond_wait` |
-| cooldown 待ちの coder | cooldown 明けちょうど | `pthread_cond_timedwait` |
+| ドングル待ちの coder（クールダウン待ちを含む） | 約 0.1ms | 100µs ずつ |
 
 ### 5. ログの混ざり（2つのメッセージが1行に混ざる）
 
@@ -182,8 +203,7 @@ subject が定めるログは次の5種類のみ。
 
 | プリミティブ | 持ち主 | 守るデータ |
 |---|---|---|
-| `pthread_mutex_t mutex` | 各 `t_dongle` | `in_use`, `released_at`, `request_queue`, `request_count`, `next_arrival_order` |
-| `pthread_cond_t cond` | 各 `t_dongle` | このドングルを待つ coder を起こす |
+| `pthread_mutex_t mutex` | 各 `t_dongle` | `in_use`, `released_at`, `request_queue`, `request_count` |
 | `pthread_mutex_t mutex` | 各 `t_coder` | `last_compile_start`, `compile_count` |
 | `pthread_mutex_t stop_mutex` | `t_table` | `stop`（シミュレーション終了のフラグ） |
 | `pthread_mutex_t log_mutex` | `t_table` | 標準出力 |
@@ -198,32 +218,71 @@ subject が定めるログは次の5種類のみ。
 | `pthread_mutex_destroy(&m)` | mutex `m` を破棄する |
 | `pthread_mutex_lock(&m)` | `m` をロックする。他スレッドが保持中なら解放されるまで待つ |
 | `pthread_mutex_unlock(&m)` | 保持している `m` を解放する |
-| `pthread_mutex_trylock(&m)` | `m` のロックを試みる。取れなければ待たずに `EBUSY` を返す |
-| `pthread_mutex_timedlock(&m, &t)` | 時刻 `t` まで `m` のロックを待つ（macOS には無い） |
-
-`pthread_mutex_trylock` と `pthread_mutex_timedlock` は参考として載せており、
-このプロジェクトでは使っていない。
 
 ### データ競合の防ぎ方
 
-- **ドングルの取得**: coder は、ドングルの mutex を持ったまま `in_use` を確認し、`true` にする。
-  このため、2人の coder が同じドングルを同時に取ることはない。
+- **ドングルの取得**: coder は、2本のドングルの mutex を両方持ったまま `in_use` を確認し、
+  `true` にする。このため、2人の coder が同じドングルを同時に取ることはない。
 - **burnout の判定**: coder は自分の mutex の中で `last_compile_start` を書き換え、
   monitor は同じ mutex の中で `last_compile_start` を読む。
   このため、monitor が書きかけの値を読むことはない。
 - **停止フラグ**: `stop` の読み取りはすべて `is_stopped()` を通り、書き込みはすべて
-  `stop_simulation()` を通る。どちらの関数も `stop_mutex` を取る。
+  `stop_mutex` の中で行う。coder と monitor は `stop_simulation()` を通して書き込み、
+  メインスレッドはスレッドの作成に失敗したときだけ、`stop_mutex` を取って直接書き込む。
 
 ### coder と monitor の間の通信
 
 - **coder から monitor へ**: 各 coder は、自分の mutex の中で `last_compile_start` と
   `compile_count` を書く。monitor はこの2つを読み、燃え尽きと全員完了を判定する。
-- **monitor から coder へ**: monitor は `stop` を立てた後、全ドングルの mutex を取って
-  `cond` に `pthread_cond_broadcast` を送る。ドングル待ちで眠っている coder は起きて
-  `stop` を確認し、ループを抜ける。
-- **合図の取りこぼし防止**: 待つ coder は、ドングルの mutex を持ったまま `stop` を確認する。
-  `pthread_cond_wait` は、その mutex の解放と眠りを一度に（不可分に）行う。monitor が broadcast
-  するには同じ mutex が要るため、broadcast は必ず、眠り始めた後の coder に届く。
+- **monitor から coder へ**: monitor は `stop_mutex` の中で `stop` を立てる。coder は
+  ドングル待ちの間は 100µs ごと、作業中は 500µs ごとに `is_stopped()` で `stop` を確認するため、
+  すぐにループを抜ける。
+
+</details>
+
+## Choice of data types（型の選び方）
+
+<details>
+<summary>開いて読む</summary>
+
+型は次の3つのルールで決めている。
+
+- **時刻と時間（ms）**: `long long`
+- **人数・回数・coder の番号**: `int`
+- **2つの状態しかないフラグ**: `bool`
+
+### 時刻と時間: `long long`
+
+| メンバー | 理由 |
+|---|---|
+| `start_time`, `last_compile_start`, `released_at`, `deadline` | `gettimeofday()` から作る「1970年からのミリ秒」（約 `1,700,000,000,000`）で、`int` には入りきらない。`get_time_ms() - released_at` のような引き算をするため、符号ありの型にしている |
+| `time_to_burnout`, `time_to_compile`, `time_to_debug`, `time_to_refactor`, `dongle_cooldown` | 時刻に足したり、時刻の差と比べたりする（`deadline = last_compile_start + time_to_burnout`、`elapsed < dongle_cooldown`）。時刻と同じ符号ありの型にすることで、符号ありと符号なしが混ざらない。混ざると、マイナスの値が知らないうちに巨大なプラスの値に変わってしまう |
+
+入力の上限は `INT_MAX` なので、「時刻 + 時間」は `long long` の上限（約 `9.2 * 10^18`）より
+はるかに小さく、あふれることはない。
+
+### 人数・回数・coder の番号: `int`
+
+| メンバー | 理由 |
+|---|---|
+| `number_of_coders`, `number_of_compiles_required` | coder の人数は OS が作れるスレッド数（数万本程度）に制限され、現実的なコンパイル回数も `INT_MAX` よりはるかに小さいため、`int` で十分である。`INT_MAX` を超える値は、`int` に収まることを保証するため、引数の読み取りではじいている |
+| `id`（`t_coder` と `t_request`） | coder の番号は `1` から `number_of_coders` までなので、`number_of_coders` と同じ型に入る |
+| `compile_count` | `number_of_compiles_required` と比べるため、同じ型にしている |
+| `request_count` | 待ち行列にある申請の数で、`0` から `2` まで |
+
+`count - 1` や `i - 1` のような計算で、値が巨大な数に化けない（符号なし型のように
+一周しない）ように、符号ありの型にしている。
+
+### そのほかのメンバー
+
+| メンバー | 型 | 理由 |
+|---|---|---|
+| `in_use`, `stop` | `bool` | 状態が2つしかない |
+| `scheduler` | `char *` | 引数 `fifo` または `edf` のコピーで、`strcmp` で比べる |
+| `request_queue` | `t_request[2]` | 1本のドングルを使う coder は最大2人なので、待つ申請も最大2つ |
+| `mutex`, `stop_mutex`, `log_mutex` | `pthread_mutex_t` | 共有データを守るために、課題が mutex を求めている |
+| `dongles`, `coders` | ポインタ | 大きさが実行時にしか分からないため、`malloc` で確保した配列 |
+| `table`, `right`, `left` | ポインタ | 複数のスレッドが同じものを共有するため、コピーせずに指し示す |
 
 </details>
 
