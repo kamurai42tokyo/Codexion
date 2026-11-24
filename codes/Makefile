@@ -1,11 +1,11 @@
-# ============================ 変数の定義 =============================
-# 
-#  NAME   ： 生成する実行ファイルの名前
-#  CC     ： コンパイラ
-#  CFLAGS ： コンパイラのフラグ
-#  SRCS   ： ソースファイル（.c）
-#  OBJS   ： オブジェクトファイル（ ".c" を ".o" に置き換えたもの）
-# 
+# ============================ Variables =============================
+#
+#  NAME   : Name of the executable to build
+#  CC     : Compiler
+#  CFLAGS : Compiler flags
+#  SRCS   : Source files (.c)
+#  OBJS   : Object files (SRCS with ".c" replaced by ".o")
+#
 # ===================================================================
 
 NAME	= codexion
@@ -32,18 +32,18 @@ OBJS	= $(SRCS:.c=.o)
 
 
 
-# =========================== ルールの定義 ============================
+# ============================== Rules ===============================
 #
-#  make all     ： 引数なしの make コマンドが実施する処理
-#  make $(NAME) ： ソースファイルをコンパイルし、実行ファイルを生成
-#  make xxx.o   ： xxx.c を１つだけコンパイルし、xxx.o を作成 
-#  make clean   ： コンパイル過程で生成されたオブジェクトファイルを削除
-#  make fclean  ： 生成された実行ファイルを削除
-#  make re      ： 生成された実行ファイルを削除し、再度実行ファイルを生成
-# 
-#  .PHONY       ： ここに記載している名前のファイルがフォルダにあっても、
-#               　 そのルールを必ず実行させる
-# 
+#  make all     : Default target when make is run without arguments
+#  make $(NAME) : Compiles the sources and builds the executable
+#  make xxx.o   : Compiles only xxx.c into xxx.o
+#  make clean   : Removes the object files
+#  make fclean  : Removes the object files and the executable
+#  make re      : Runs fclean, then builds the executable again
+#
+#  .PHONY       : Always runs these rules, even if a file with
+#                 the same name exists in the folder
+#
 # ===================================================================
 
 all: $(NAME)

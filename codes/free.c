@@ -12,6 +12,9 @@
 
 #include "codexion.h"
 
+/*
+** Frees all count pointers passed as variadic arguments.
+*/
 void	free_all(int count, ...)
 {
 	va_list	args;
@@ -27,35 +30,44 @@ void	free_all(int count, ...)
 	va_end(args);
 }
 
-void    destroy_dongle_mutexes(t_dongle *dongles, uintmax_t count)
+/*
+** Destroys the mutex of the first count dongles.
+*/
+void	destroy_dongle_mutexes(t_dongle *dongles, int count)
 {
-    while (count > 0)
-    {
-        count--;
-        pthread_mutex_destroy(&dongles[count].mutex);
-        pthread_cond_destroy(&dongles[count].cond);
-    }
+	while (count > 0)
+		pthread_mutex_destroy(&dongles[--count].mutex);
 }
 
-void    destroy_coder_mutexes(t_coder *coders, uintmax_t count)
+/*
+** Destroys the mutex of the first count coders.
+*/
+void	destroy_coder_mutexes(t_coder *coders, int count)
 {
-    while (count > 0)
-        pthread_mutex_destroy(&coders[--count].mutex);
+	while (count > 0)
+		pthread_mutex_destroy(&coders[--count].mutex);
 }
 
+/*
+** Destroys stop_mutex and log_mutex of the table.
+*/
 void	destroy_table_mutexes(t_table *table)
 {
 	pthread_mutex_destroy(&table->stop_mutex);
 	pthread_mutex_destroy(&table->log_mutex);
 }
 
-void    free_table(t_table *table)
+/*
+** Destroys all mutexes held by the table,
+** then frees dongles, coders and the table.
+*/
+void	free_table(t_table *table)
 {
-    uintmax_t   count;
+	int	count;
 
-    count = table->config.number_of_coders;
-    destroy_dongle_mutexes(table->dongles, count);
-    destroy_coder_mutexes(table->coders, count);
-    destroy_table_mutexes(table);
-    free_all(3, table->dongles, table->coders, table);
+	count = table->config.number_of_coders;
+	destroy_dongle_mutexes(table->dongles, count);
+	destroy_coder_mutexes(table->coders, count);
+	destroy_table_mutexes(table);
+	free_all(3, table->dongles, table->coders, table);
 }

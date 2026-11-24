@@ -139,27 +139,43 @@ The subject defines only the following five log messages.
 
 - Problem: if every coder takes their left dongle at the same time, every coder
   waits for their right dongle forever.
-- Solution: odd-numbered coders take their left dongle first, and even-numbered
-  coders take their right dongle first.
-- Result: two neighbouring coders compete for the same dongle, so a cycle in
-  which every coder holds one dongle and waits cannot form.
+- Solution: a coder takes both dongles at the same time, only when both are
+  free. The two dongle mutexes are always locked in a fixed order (lower
+  address first).
+- Result: no coder holds one dongle while waiting for the other
+  (no "hold and wait"), and the fixed lock order prevents a cycle of threads
+  waiting for each other's mutex (no "circular wait").
 
 ### 2. Starvation (one coder never gets a turn)
 
 - Problem: if the same coder keeps taking a dongle, the neighbouring coder burns out.
 - Solution: each dongle has a queue of requests and hands itself over in a fixed order.
+  A coder puts the same request in the queues of both dongles at once, and
+  takes the dongles only when it is at the head of both queues.
   - fifo: the dongle goes to the coder who requested it first.
+    At the start, even coders wait `time_to_compile / 2` ms before their first
+    request, so the head of each queue is always an odd coder.
+    Without this wait, the coders may request in id order (1, 2, 3, ...),
+    each coder then waits for the one before it, and only one coder can
+    compile at a time.
+    During this wait the dongles of an even coder are in use by odd coders
+    anyway, so the wait does not put even coders at a disadvantage.
   - edf: the dongle goes to the coder whose burnout deadline is closest.
-    If two deadlines are equal, the coder who requested first wins.
+    If two deadlines are equal, odd ids win, then the smaller id.
+    At the start every deadline is the same, so the odd coders compile first
+    and the even coders next, instead of one coder at a time.
 - Result: a coder who has just compiled cannot overtake the neighbour who is waiting.
+  Because every queue uses the same order, the queues can never form a cycle
+  in which each coder is first in one queue but second in the other.
 
 ### 3. Cooldown (a returned dongle cannot be used right away)
 
-- Problem: nobody sends a signal when a cooldown ends, so a coder sleeping in
-  `pthread_cond_wait` cannot wake up.
-- Solution: the coder sleeps with `pthread_cond_timedwait`, passing the time at
-  which the cooldown ends.
-- Result: the coder wakes up at whichever comes first: a signal, or the end of the cooldown.
+- Problem: a returned dongle must not be taken again until `dongle_cooldown`
+  milliseconds have passed.
+- Solution: each dongle records `released_at`. A dongle counts as free only when
+  `in_use` is `false` and `dongle_cooldown` ms have passed since `released_at`.
+- Result: a waiting coder rechecks the dongles every 100 µs, so it notices the
+  end of the cooldown within about 0.1 ms.
 
 ### 4. Burnout detection (report within 10 ms)
 
@@ -172,8 +188,7 @@ The subject defines only the following five log messages.
 |---|---|---|
 | monitor | 10 ms | 1 ms |
 | coder while working | about 1 ms | steps of 500 µs |
-| coder waiting for a dongle | none (woken by a signal) | `pthread_cond_wait` |
-| coder waiting for a cooldown | exactly when the cooldown ends | `pthread_cond_timedwait` |
+| coder waiting for dongles (including cooldown) | about 0.1 ms | steps of 100 µs |
 
 ### 5. Mixed logs (two messages on one line)
 
@@ -199,8 +214,7 @@ The subject defines only the following five log messages.
 
 | Primitive | Owner | Protected data |
 |---|---|---|
-| `pthread_mutex_t mutex` | each `t_dongle` | `in_use`, `released_at`, `request_queue`, `request_count`, `next_arrival_order` |
-| `pthread_cond_t cond` | each `t_dongle` | Wakes coders waiting for this dongle |
+| `pthread_mutex_t mutex` | each `t_dongle` | `in_use`, `released_at`, `request_queue`, `request_count` |
 | `pthread_mutex_t mutex` | each `t_coder` | `last_compile_start`, `compile_count` |
 | `pthread_mutex_t stop_mutex` | `t_table` | `stop` (the end-of-simulation flag) |
 | `pthread_mutex_t log_mutex` | `t_table` | Standard output |
@@ -216,17 +230,12 @@ needs no lock.
 | `pthread_mutex_destroy(&m)` | Destroys the mutex `m` |
 | `pthread_mutex_lock(&m)` | Locks `m`. If another thread holds it, waits until it is released |
 | `pthread_mutex_unlock(&m)` | Releases `m`, which the caller holds |
-| `pthread_mutex_trylock(&m)` | Tries to lock `m`. If it cannot, returns `EBUSY` without waiting |
-| `pthread_mutex_timedlock(&m, &t)` | Waits to lock `m` until time `t` (not available on macOS) |
-
-`pthread_mutex_trylock` and `pthread_mutex_timedlock` are listed for reference
-and are not used in this project.
 
 ### How race conditions are prevented
 
 - **Taking a dongle**: a coder checks `in_use` and sets it to `true` while
-  holding the dongle's mutex. Two coders therefore can never take the same
-  dongle at the same time.
+  holding the mutexes of both dongles. Two coders therefore can never take the
+  same dongle at the same time.
 - **Burnout check**: a coder updates `last_compile_start` under its own mutex,
   and the monitor reads it under the same mutex. The monitor therefore never
   reads a half-written value.
@@ -238,13 +247,9 @@ and are not used in this project.
 - **Coder to monitor**: each coder writes `last_compile_start` and
   `compile_count` under its own mutex. The monitor reads them to detect a
   burnout or the end of all compiles.
-- **Monitor to coders**: the monitor sets `stop`, then locks every dongle and
-  calls `pthread_cond_broadcast` on its `cond`. Coders sleeping on a dongle
-  wake up, see `stop`, and leave their loop.
-- **No lost wake-up**: a waiting coder checks `stop` while holding the dongle's
-  mutex, and `pthread_cond_wait` releases that mutex and starts sleeping in one
-  atomic step. The monitor needs the same mutex to broadcast, so the broadcast
-  always reaches a coder that has already started sleeping.
+- **Monitor to coders**: the monitor sets `stop` under `stop_mutex`. Coders
+  check `stop` through `is_stopped()` every 100 µs while waiting for dongles
+  and every 500 µs while working, so they leave their loop soon after.
 
 </details>
 

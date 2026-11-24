@@ -6,132 +6,164 @@
 /*   By: kamurai <kamurai>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/29 01:07:57 by kamurai           #+#    #+#             */
-/*   Updated: 2026/11/02 17:55:00 by kamurai          ###   ########.fr       */
+/*   Updated: 2026/11/24 19:46:17 by kamurai          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CODEXION_H
 # define CODEXION_H
 
-# include <stdio.h>
-# include <stdint.h>
-# include <stdlib.h>
-# include <stdarg.h>
-# include <string.h>
-# include <stdbool.h>
-# include <unistd.h>
 # include <pthread.h>
+# include <stdarg.h>
+# include <stdbool.h>
+# include <stdint.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
 # include <sys/time.h>
+# include <unistd.h>
+# include <limits.h>
 
 typedef struct s_table	t_table;
 
 /*
-** t_config: コマンドライン引数8つから読み取ったシミュレーションの設定。
-** 個数: 1個。t_table の config に埋め込む。
-** 共有: 全スレッドが読む。main が設定した後は誰も書き換えないため鍵は不要。
+** t_config: Simulation settings read from the 8 command line arguments.
+** Count: 1. Embedded in t_table as config.
+** Shared: Read by all threads. Never modified after main sets it,
+**         so no lock is needed.
+** Members:
+**   number_of_coders            : Number of coders
+**   time_to_burnout             : Time until burnout (ms)
+**   time_to_compile             : Compile time (ms)
+**   time_to_debug               : Debug time (ms)
+**   time_to_refactor            : Refactor time (ms)
+**   number_of_compiles_required : Compiles needed to finish
+**   dongle_cooldown             : Time before reuse (ms)
+**   scheduler                   : "fifo" or "edf"
 */
 typedef struct s_config
 {
-	uintmax_t	number_of_coders;				// coder の人数
-	uintmax_t	time_to_burnout;				// 燃え尽きまでの時間(ms)
-	uintmax_t	time_to_compile;				// コンパイル時間(ms)
-	uintmax_t	time_to_debug;					// デバッグ時間(ms)
-	uintmax_t	time_to_refactor;				// リファクタ時間(ms)
-	uintmax_t	number_of_compiles_required;	// 終了に必要な回数
-	uintmax_t	dongle_cooldown;				// 再利用までの時間(ms)
-	char		*scheduler;						// "fifo" か "edf"
-}	t_config;
+	int			number_of_coders;	/* 人数: 1〜INT_MAX */
+	long long	time_to_burnout;	/* ms: 時刻に足すため */
+	long long	time_to_compile;	/* ms: 時刻と同じ型 */
+	long long	time_to_debug;		/* ms: 時刻と同じ型 */
+	long long	time_to_refactor;	/* ms: 時刻と同じ型 */
+	int			number_of_compiles_required;	/* 回数: 0〜INT_MAX */
+	long long	dongle_cooldown;	/* ms: 経過時間と比べるため */
+	char		*scheduler;			/* "fifo" か "edf" */
+}						t_config;
 
 /*
-** t_request: coder がドングルの待ち行列に出す申込書1枚。
-** 個数: ドングル1本につき最大2枚。t_dongle の queue に置く。
-** 共有: t_dongle の一部なので、そのドングルの mutex で守る。
+** t_request: One request a coder puts in a dongle's waiting queue.
+** Count: Up to 2 per dongle. Stored in t_dongle's request_queue.
+** Shared: Part of t_dongle, so guarded by that dongle's mutex.
+** Members:
+**   id       : Id of the requesting coder
+**   deadline : Burnout deadline (ms, for edf)
 */
 typedef struct s_request
 {
-	uintmax_t	id;								// 申し込んだ coder の番号
-	long long	deadline;						// 燃え尽き期限(ms)（edf用）
-	uintmax_t	arrival_order;					// 到着順で割り振られる番号（fifo用）
-}	t_request;
+	int			id;			/* coder番号: 1〜number_of_coders */
+	long long	deadline;	/* 時刻: 1970年からのms, INT_MAXを超える */
+}						t_request;
 
 /*
-** t_dongle: 円卓の上の USB ドングル1本。
-** 個数: number_of_coders 本。t_table の dongle 配列に置く。
-** 共有: 左右の coder 2人が読み書きする。全メンバを mutex で守る。
+** t_dongle: One USB dongle on the round table.
+** Count: number_of_coders. Stored in t_table's dongles array.
+** Shared: Read and written by the 2 adjacent coders.
+**         All members are guarded by mutex.
+** Members:
+**   in_use        : true while in use
+**   released_at   : Last release time (ms)
+**   request_queue : Waiting requests (max 2)
+**   request_count : Number of requests (0-2)
+**   mutex         : Guards state and queue
 */
 typedef struct s_dongle
 {
-	bool			in_use;						// 使用中なら true
-	long long		released_at;				// 最後に返された時刻(ms)
-	t_request		request_queue[2];			// 待ちの申込書(最大2件)
-	int				request_count;				// queue の件数(0〜2)
-	uintmax_t		next_arrival_order;			// 次に配る到着番号
-	pthread_mutex_t	mutex;						// このドングルの状態と待ち行列を守る鍵
-	pthread_cond_t	cond;						// 待つ coder を起こす合図
-}	t_dongle;
+	bool			in_use;				/* 状態が2つだけ */
+	long long		released_at;		/* 時刻: 1970年からのms */
+	t_request		request_queue[2];	/* 待つcoderは最大2人 */
+	int				request_count;		/* 小さい個数: 0〜2 */
+	pthread_mutex_t	mutex;				/* 課題で必須 */
+}						t_dongle;
 
 /*
-** t_coder: 円卓に座る coder 1人(スレッド1本につき1個)。
-** 個数: number_of_coders 個。t_table の coders 配列に置く。
-** 共有: その coder のスレッドが書き、monitor スレッドが読む(守る鍵は未定)。
+** t_coder: One coder at the round table (one per thread).
+** Count: number_of_coders. Stored in t_table's coders array.
+** Shared: Written by its own thread and read by the monitor thread.
+**         last_compile_start and compile_count are guarded by mutex.
+** Members:
+**   id                 : Coder id (starts at 1)
+**   last_compile_start : Last compile start (ms)
+**   compile_count      : Number of compiles done
+**   mutex              : Guards the values above
+**   table              : Pointer to the table
+**   right              : Right dongle
+**   left               : Left dongle
 */
 typedef struct s_coder
 {
-	uintmax_t		id;							// coder の番号(1始まり)
-	long long		last_compile_start;			// 最後のコンパイル開始時刻(ms)
-	uintmax_t		compile_count;				// コンパイルを終えた回数
-	pthread_mutex_t	mutex;						// 上の値を守る鍵
-	t_table			*table;						// 円卓の住所
-	t_dongle		*right;						// 右のドングル
-	t_dongle		*left;						// 左のドングル
-}	t_coder;
+	int				id;					/* coder番号: 1〜N */
+	long long		last_compile_start;	/* 時刻: 1970年からのms */
+	int				compile_count;		/* 回数: intの値と比べるため */
+	pthread_mutex_t	mutex;				/* 上の2つを守る */
+	t_table			*table;				/* 共有するのでポインタ */
+	t_dongle		*right;				/* 隣のcoderと共有 */
+	t_dongle		*left;				/* 隣のcoderと共有 */
+}						t_coder;
 
 /*
-** t_table: coder とドングルが囲む円卓。
-** 個数: 1個。run_simulations が用意する。
-** 共有: 全スレッドが読む。stop だけは書き換わるため stop_mutex で守る。
+** t_table: The round table shared by coders and dongles.
+** Count: 1. Prepared by run_simulations.
+** Shared: Read by all threads. Only stop changes,
+**         so it is guarded by stop_mutex.
+** Members:
+**   config     : Settings (read-only)
+**   dongles    : Array of dongles
+**   coders     : Array of coders
+**   start_time : Simulation start time (ms)
+**   stop       : true stops everyone
+**   stop_mutex : Guards stop
+**   log_mutex  : Guards log output
 */
 typedef struct s_table
 {
-	t_config		config;						// 引数の設定(読み取り専用)
-	t_dongle		*dongles;					// ドングルの配列
-	t_coder			*coders;					// coder の配列
-	long long		start_time;					// シミュレーション開始時刻
-	bool			stop;						// true で全員停止
-	pthread_mutex_t	stop_mutex;					// stop を守る鍵
-	pthread_mutex_t	log_mutex;					// ログ出力を守る鍵
-}	t_table;
+	t_config		config;		/* 1回コピーして読むだけ */
+	t_dongle		*dongles;	/* mallocしたN個の配列 */
+	t_coder			*coders;	/* mallocしたN個の配列 */
+	long long		start_time;	/* 時刻: 1970年からのms */
+	bool			stop;		/* 状態が2つだけ */
+	pthread_mutex_t	stop_mutex;	/* 課題で必須 */
+	pthread_mutex_t	log_mutex;	/* 課題で必須 */
+}						t_table;
 
-
-bool		is_scheduler(char *str);
-bool		set_num(char *str, uintmax_t *num);
-bool		set_scheduler(char *src, char *dst);
-void		free_all(int count, ...);
-void		free_table(t_table *table);
-void    	destroy_dongle_mutexes(t_dongle *dongles, uintmax_t count);
-void    	destroy_coder_mutexes(t_coder *coders, uintmax_t count);
-void		destroy_table_mutexes(t_table *table);
-bool		run_simulations(t_config data);
-bool    	set_table(t_table **table, t_config config);
-long long	get_time_ms(void);
-void		*run_simulation(void *arg);
-void 		*monitor_routine(void *arg);
-void		submit_request(t_coder *coder, t_dongle *dongle);
-t_config	*set_data(char **argv);
-void		print_log(char *command, t_coder *coder);
-bool		is_stopped(t_table *table);
-void		stop_simulation(t_table *table);
-t_request	make_request(t_coder *coder, t_dongle *dongle);
-void		push_request(t_request new_request, t_dongle *dongle,
-				char *scheduler);
-void		remove_request(t_coder *coder, t_dongle *dongle);
-uintmax_t	get_earliest_deadline_id(t_dongle *dongle);
-bool		is_my_turn(t_coder *coder, t_dongle *dongle);
-bool		take_dongles(t_coder *coder, t_dongle *first, t_dongle *second);
-void		release_dongles(t_dongle *dongle1, t_dongle *dongle2);
-void		compiling(t_coder *coder);
-void		debugging(t_coder *coder);
-void		refactoring(t_coder *coder);
-void		sleep_in_500us_steps(t_table *table, long long ms);
+void					free_all(int count, ...);
+void					free_table(t_table *table);
+void					destroy_dongle_mutexes(t_dongle *dongles,
+							int count);
+void					destroy_coder_mutexes(t_coder *coders, int count);
+void					destroy_table_mutexes(t_table *table);
+bool					run_simulations(t_config data);
+bool					set_table(t_table **table, t_config config);
+long long				get_time_ms(void);
+void					*run_simulation(void *arg);
+void					*monitor_routine(void *arg);
+t_config				*set_data(char **argv);
+void					print_log(char *command, t_coder *coder);
+bool					is_stopped(t_table *table);
+void					stop_simulation(t_table *table);
+t_request				make_request(t_coder *coder);
+void					push_request(t_request new_request, t_dongle *dongle,
+							char *scheduler);
+void					remove_request(t_dongle *dongle);
+bool					is_my_turn(t_coder *coder, t_dongle *dongle);
+bool					take_dongles(t_coder *coder, t_dongle *first,
+							t_dongle *second);
+void					release_dongles(t_dongle *dongle1, t_dongle *dongle2);
+void					compiling(t_coder *coder);
+void					debugging(t_coder *coder);
+void					refactoring(t_coder *coder);
+void					sleep_in_500us_steps(t_table *table, long long ms);
 
 #endif

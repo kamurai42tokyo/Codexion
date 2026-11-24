@@ -12,47 +12,34 @@
 
 #include "../codexion.h"
 
-// dongle が cooldown 中かを判定する。
-bool	is_cooldown(t_coder *coder, t_dongle *dongle)
+/*
+** Checks whether the dongle is in cooldown
+** (less than dongle_cooldown ms since it was released).
+** Return: true if in cooldown, false otherwise
+*/
+static bool	is_cooldown(t_coder *coder, t_dongle *dongle)
 {
 	t_config	*config;
 	long long	elapsed;
-	
+
 	elapsed = get_time_ms() - dongle->released_at;
 	config = &(coder->table->config);
-	if (elapsed < (long long)config->dongle_cooldown)
+	if (elapsed < config->dongle_cooldown)
 		return (true);
 	else
 		return (false);
 }
 
-/* この dongle がこの coder のものかを判定する。
-** [判定１] dongle->request_count が 0 件なら false
-** [判定２] dongle->in_use が true なら false
-** [判定３] dongle が cooldown 中なら false
-** [判定４] fifo/edf に応じた方法で、この coder が次に dongle を取れるか判定
-** 　-　fifo の場合: request_queue[0] が coder のものなら true
-** 　-　edf  の場合: request_queue のうち deadline が早い方が coder のものなら true
+/*
+** Checks whether the coder can take this dongle now.
+** 1. false if there is no request, it is in use, or in cooldown
+** 2. true if request_queue[0] is this coder
+**    (the head is next for both fifo and edf)
+** Return: true if it can be taken, false otherwise
 */
 bool	is_my_turn(t_coder *coder, t_dongle *dongle)
 {
-	t_config	*config;
-	bool		in_cooldown;
-	
-	config = &(coder->table->config);
-	
-	// 1
-	in_cooldown = is_cooldown(coder, dongle);
-	if (!dongle->request_count || dongle->in_use || in_cooldown)
+	if (!dongle->request_count || dongle->in_use || is_cooldown(coder, dongle))
 		return (false);
-
-	// 2
-	if (strcmp(config->scheduler, "fifo") == 0 && \
-			coder->id == dongle->request_queue[0].id)
-		return (true);
-	else if (strcmp(config->scheduler, "edf") == 0 && \
-			coder->id == get_earliest_deadline_id(dongle))
-		return (true);
-	else
-		return (false);
+	return (coder->id == dongle->request_queue[0].id);
 }
