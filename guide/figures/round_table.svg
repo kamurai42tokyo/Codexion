@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" width="940" height="520">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 14px; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 13px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .table { fill: #f3efe6; stroke: #a0937d; stroke-width: 2; }
+    .cd { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.8; }
+    .dg { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.8; }
+    .r { stroke: #2f6fdb; stroke-width: 2; fill: none; }
+    .l { stroke: #c0392b; stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+  </style>
+  <rect width="940" height="520" fill="#ffffff"/>
+  <text class="t" x="30" y="30">円卓の座り方（例 N = 4）</text>
+
+  <circle class="table" cx="300" cy="270" r="105"/>
+  <text class="s" x="300" y="274" text-anchor="middle">円卓</text>
+
+  <!-- links: coder -> right (solid), coder -> left (dashed) -->
+  <line class="r" x1="300" y1="110" x2="187" y2="157"/>
+  <line class="l" x1="300" y1="110" x2="413" y2="157"/>
+  <line class="r" x1="460" y1="270" x2="413" y2="157"/>
+  <line class="l" x1="460" y1="270" x2="413" y2="383"/>
+  <line class="r" x1="300" y1="430" x2="413" y2="383"/>
+  <line class="l" x1="300" y1="430" x2="187" y2="383"/>
+  <line class="r" x1="140" y1="270" x2="187" y2="383"/>
+  <line class="l" x1="140" y1="270" x2="187" y2="157"/>
+
+  <!-- coders -->
+  <circle class="cd" cx="300" cy="110" r="36"/><text class="t" x="300" y="106" text-anchor="middle">coder 1</text><text class="s" x="300" y="124" text-anchor="middle">i = 0</text>
+  <circle class="cd" cx="460" cy="270" r="36"/><text class="t" x="460" y="266" text-anchor="middle">coder 2</text><text class="s" x="460" y="284" text-anchor="middle">i = 1</text>
+  <circle class="cd" cx="300" cy="430" r="36"/><text class="t" x="300" y="426" text-anchor="middle">coder 3</text><text class="s" x="300" y="444" text-anchor="middle">i = 2</text>
+  <circle class="cd" cx="140" cy="270" r="36"/><text class="t" x="140" y="266" text-anchor="middle">coder 4</text><text class="s" x="140" y="284" text-anchor="middle">i = 3</text>
+
+  <!-- dongles -->
+  <rect class="dg" x="152" y="142" width="70" height="30" rx="6"/><text class="m" x="187" y="162" text-anchor="middle">d[0]</text>
+  <rect class="dg" x="378" y="142" width="70" height="30" rx="6"/><text class="m" x="413" y="162" text-anchor="middle">d[1]</text>
+  <rect class="dg" x="378" y="368" width="70" height="30" rx="6"/><text class="m" x="413" y="388" text-anchor="middle">d[2]</text>
+  <rect class="dg" x="152" y="368" width="70" height="30" rx="6"/><text class="m" x="187" y="388" text-anchor="middle">d[3]</text>
+
+  <!-- explanation -->
+  <line class="r" x1="560" y1="70" x2="600" y2="70"/><text x="610" y="74">right（右）</text>
+  <line class="l" x1="720" y1="70" x2="760" y2="70"/><text x="770" y="74">left（左）</text>
+
+  <text class="t" x="560" y="115">init.c の set_coders が決める規則</text>
+  <text class="m" x="560" y="142">coders[i].right = &amp;dongles[i]</text>
+  <text class="m" x="560" y="164">coders[i].left  = &amp;dongles[(i+1) % N]</text>
+  <text class="s" x="560" y="186">d[k] は dongles[k] の略。i は配列の添字、id = i + 1。</text>
+
+  <text class="t" x="560" y="228">N = 4 のときの割り当て</text>
+  <text class="m" x="560" y="254">coder 1 (i=0): right d[0]  left d[1]</text>
+  <text class="m" x="560" y="278">coder 2 (i=1): right d[1]  left d[2]</text>
+  <text class="m" x="560" y="302">coder 3 (i=2): right d[2]  left d[3]</text>
+  <text class="m" x="560" y="326">coder 4 (i=3): right d[3]  left d[0]</text>
+  <text class="s" x="560" y="348">↑ (3 + 1) % 4 = 0 なので、最後の人は d[0] に戻る</text>
+
+  <text class="t" x="560" y="392">N = 1 のとき</text>
+  <text class="s" x="560" y="416">(0 + 1) % 1 = 0 なので right も left も d[0]（同じ1本）。</text>
+  <text class="s" x="560" y="436">2本そろわないのでコンパイルできず、必ず燃え尽きる。</text>
+  <text class="s" x="560" y="456">このため coder.c は 1人用の流れを別に用意している。</text>
+
+  <text class="s" x="30" y="500">隣り合う2人は、間にある1本のドングルを共有する（例：coder 1 と coder 2 は d[1] を取り合う）。</text>
+</svg>

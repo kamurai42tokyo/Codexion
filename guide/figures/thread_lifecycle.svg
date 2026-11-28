@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" width="960" height="440">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 14px; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .lane { fill: #f8fafc; stroke: #d9e2ec; stroke-width: 1; }
+    .box { fill: #f5f7fa; stroke: #52606d; stroke-width: 1.5; }
+    .cd { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .mo { fill: #eafaf1; stroke: #1e8449; stroke-width: 1.5; }
+    .wait { fill: #ffffff; stroke: #52606d; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .stop { fill: #fff1f0; stroke: #c0392b; stroke-width: 1.8; }
+    .line { stroke: #52606d; stroke-width: 1.5; fill: none; }
+    .red { stroke: #c0392b; stroke-width: 1.8; fill: none; stroke-dasharray: 5 3; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>
+  </defs>
+  <rect width="960" height="440" fill="#ffffff"/>
+
+  <!-- lanes -->
+  <rect class="lane" x="10" y="50" width="940" height="90"/>
+  <rect class="lane" x="10" y="160" width="940" height="90"/>
+  <rect class="lane" x="10" y="270" width="940" height="90"/>
+  <text class="t" x="20" y="92">main</text><text class="s" x="20" y="112">スレッド（1本）</text>
+  <text class="t" x="20" y="202">coder</text><text class="s" x="20" y="222">スレッド（N本）</text>
+  <text class="t" x="20" y="312">monitor</text><text class="s" x="20" y="332">スレッド（1本）</text>
+  <text class="s" x="140" y="34">時間の流れ →</text>
+  <line class="line" x1="230" y1="30" x2="930" y2="30" marker-end="url(#a)"/>
+
+  <!-- main lane -->
+  <rect class="box" x="130" y="70" width="90" height="50" rx="6"/><text class="m" x="175" y="92" text-anchor="middle">set_data</text><text class="s" x="175" y="110" text-anchor="middle">引数を読む</text>
+  <rect class="box" x="230" y="70" width="90" height="50" rx="6"/><text class="m" x="275" y="92" text-anchor="middle">set_table</text><text class="s" x="275" y="110" text-anchor="middle">構造体を準備</text>
+  <rect class="box" x="330" y="70" width="110" height="50" rx="6"/><text class="m" x="385" y="92" text-anchor="middle">set_start_time</text><text class="s" x="385" y="110" text-anchor="middle">開始時刻を記録</text>
+  <rect class="box" x="450" y="70" width="110" height="50" rx="6"/><text class="m" x="505" y="92" text-anchor="middle">create_threads</text><text class="s" x="505" y="110" text-anchor="middle">N+1本を起動</text>
+  <rect class="wait" x="570" y="70" width="230" height="50" rx="6"/><text class="m" x="685" y="92" text-anchor="middle">join_threads</text><text class="s" x="685" y="110" text-anchor="middle">全員が終わるまで待つ</text>
+  <rect class="box" x="810" y="70" width="130" height="50" rx="6"/><text class="m" x="875" y="92" text-anchor="middle">free_table</text><text class="s" x="875" y="110" text-anchor="middle">後片付け</text>
+  <line class="line" x1="220" y1="95" x2="230" y2="95"/>
+  <line class="line" x1="320" y1="95" x2="330" y2="95"/>
+  <line class="line" x1="440" y1="95" x2="450" y2="95"/>
+  <line class="line" x1="560" y1="95" x2="570" y2="95"/>
+  <line class="line" x1="800" y1="95" x2="810" y2="95"/>
+
+  <!-- start arrows -->
+  <path class="line" d="M520,120 L520,150 L600,150 L600,178" marker-end="url(#a)"/>
+  <path class="line" d="M490,120 L490,315 L543,315" marker-end="url(#a)"/>
+
+  <!-- coder lane -->
+  <rect class="cd" x="560" y="180" width="200" height="50" rx="6"/>
+  <text class="m" x="660" y="200" text-anchor="middle">run_simulation</text>
+  <text class="s" x="660" y="218" text-anchor="middle">ドングルを取って作業をくり返す</text>
+
+  <!-- monitor lane -->
+  <rect class="mo" x="545" y="290" width="160" height="50" rx="6"/>
+  <text class="m" x="625" y="310" text-anchor="middle">monitor_routine</text>
+  <text class="s" x="625" y="328" text-anchor="middle">約1msごとに見回る</text>
+  <rect class="stop" x="705" y="295" width="85" height="40" rx="6"/>
+  <text class="s" x="747" y="313" text-anchor="middle">stop を</text><text class="s" x="747" y="328" text-anchor="middle">true にする</text>
+
+  <!-- stop propagates -->
+  <line class="red" x1="747" y1="295" x2="747" y2="232" marker-end="url(#ar)"/>
+  <text class="s" x="760" y="262" fill="#c0392b">coder が気づいて終わる</text>
+
+  <!-- end -> join -->
+  <line class="line" x1="740" y1="180" x2="740" y2="122" marker-end="url(#a)"/>
+  <path class="line" d="M790,315 L800,315 L800,122" marker-end="url(#a)"/>
+  <text class="s" x="808" y="160">ループを</text><text class="s" x="808" y="176">抜けて終わる</text>
+
+  <text class="s" x="20" y="390">・number_of_compiles_required が 0 のときは、set_table より前に何も出力せず正常終了する（simulation.c の run_simulations）。</text>
+  <text class="s" x="20" y="410">・スレッド作成に失敗したら、main スレッドが stop を true にして、作れた coder スレッドだけ join してから片付ける。</text>
+  <text class="s" x="20" y="430">・stop を true にするのは monitor（燃え尽き・全員が規定回数）か、上の失敗時の main だけ。</text>
+</svg>

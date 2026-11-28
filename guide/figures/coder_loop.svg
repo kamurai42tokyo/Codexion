@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 780" width="900" height="780">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .y { font-size: 12px; fill: #1e8449; font-weight: bold; }
+    .n { font-size: 12px; fill: #c0392b; font-weight: bold; }
+    .box { fill: #f5f7fa; stroke: #52606d; stroke-width: 1.5; }
+    .cd { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .one { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.5; }
+    .dia { fill: #ffffff; stroke: #52606d; stroke-width: 1.5; }
+    .end { fill: #fff1f0; stroke: #c0392b; stroke-width: 1.5; }
+    .line { stroke: #52606d; stroke-width: 1.5; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+  </defs>
+  <rect width="900" height="780" fill="#ffffff"/>
+
+  <!-- start -->
+  <rect class="box" x="350" y="20" width="200" height="40" rx="20"/>
+  <text class="m" x="450" y="45" text-anchor="middle">run_simulation(coder)</text>
+  <line class="line" x1="450" y1="60" x2="450" y2="88" marker-end="url(#a)"/>
+
+  <!-- N == 1 ? -->
+  <polygon class="dia" points="450,90 540,120 450,150 360,120"/>
+  <text x="450" y="124" text-anchor="middle">N == 1 ?</text>
+
+  <!-- single coder path -->
+  <path class="line" d="M360,120 L170,120 L170,178" marker-end="url(#a)"/>
+  <text class="y" x="320" y="112">はい</text>
+  <rect class="one" x="60" y="180" width="220" height="50" rx="6"/>
+  <text x="170" y="201" text-anchor="middle">ドングル1本を取り</text>
+  <text class="s" x="170" y="220" text-anchor="middle">「has taken a dongle」を出す</text>
+  <line class="line" x1="170" y1="230" x2="170" y2="258" marker-end="url(#a)"/>
+  <rect class="one" x="60" y="260" width="220" height="50" rx="6"/>
+  <text x="170" y="281" text-anchor="middle">stop が true になるまで</text>
+  <text class="s" x="170" y="300" text-anchor="middle">500µs ごとに確認して待つ</text>
+  <line class="line" x1="170" y1="310" x2="170" y2="338" marker-end="url(#a)"/>
+  <rect class="end" x="60" y="340" width="220" height="50" rx="6"/>
+  <text x="170" y="361" text-anchor="middle">ドングルを返して終了</text>
+  <text class="s" x="170" y="380" text-anchor="middle">（燃え尽きは monitor が出す）</text>
+
+  <!-- fifo & even ? -->
+  <line class="line" x1="450" y1="150" x2="450" y2="186" marker-end="url(#a)"/>
+  <text class="n" x="460" y="172">いいえ</text>
+  <polygon class="dia" points="450,188 570,220 450,252 330,220"/>
+  <text x="450" y="217" text-anchor="middle">fifo かつ</text>
+  <text x="450" y="234" text-anchor="middle">id が偶数 ?</text>
+  <line class="line" x1="570" y1="220" x2="638" y2="220" marker-end="url(#a)"/>
+  <text class="y" x="586" y="212">はい</text>
+  <rect class="box" x="640" y="195" width="220" height="50" rx="6"/>
+  <text x="750" y="216" text-anchor="middle">time_to_compile / 2 ms 待つ</text>
+  <text class="s" x="750" y="235" text-anchor="middle">（奇数番と時間をずらす）</text>
+  <path class="line" d="M750,245 L750,276 L456,276" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="252" x2="450" y2="298" marker-end="url(#a)"/>
+  <text class="n" x="400" y="270">いいえ</text>
+
+  <!-- stop ? -->
+  <polygon class="dia" points="450,300 550,330 450,360 350,330"/>
+  <text x="450" y="334" text-anchor="middle">stop が true ?</text>
+  <path class="line" d="M550,330 L740,330 L740,638" marker-end="url(#a)"/>
+  <text class="y" x="566" y="322">はい</text>
+
+  <!-- loop body -->
+  <line class="line" x1="450" y1="360" x2="450" y2="398" marker-end="url(#a)"/>
+  <text class="n" x="460" y="384">いいえ</text>
+  <rect class="cd" x="320" y="400" width="260" height="50" rx="6"/>
+  <text class="m" x="450" y="421" text-anchor="middle">take_dongles</text>
+  <text class="s" x="450" y="440" text-anchor="middle">2本そろうまで待って、同時に取る</text>
+  <line class="line" x1="580" y1="425" x2="740" y2="425"/>
+  <text class="s" x="590" y="417">false（待つ間に stop）</text>
+
+  <line class="line" x1="450" y1="450" x2="450" y2="478" marker-end="url(#a)"/>
+  <rect class="cd" x="300" y="480" width="300" height="50" rx="6"/>
+  <text class="m" x="450" y="501" text-anchor="middle">compiling</text>
+  <text class="s" x="450" y="520" text-anchor="middle">開始時刻を記録 → 待つ → 回数を +1</text>
+  <line class="line" x1="450" y1="530" x2="450" y2="558" marker-end="url(#a)"/>
+  <rect class="cd" x="320" y="560" width="260" height="40" rx="6"/>
+  <text class="m" x="450" y="585" text-anchor="middle">release_dongles（2本返す）</text>
+  <line class="line" x1="450" y1="600" x2="450" y2="628" marker-end="url(#a)"/>
+  <rect class="cd" x="320" y="630" width="260" height="40" rx="6"/>
+  <text class="m" x="450" y="655" text-anchor="middle">debugging</text>
+  <line class="line" x1="450" y1="670" x2="450" y2="698" marker-end="url(#a)"/>
+  <rect class="cd" x="320" y="700" width="260" height="40" rx="6"/>
+  <text class="m" x="450" y="725" text-anchor="middle">refactoring</text>
+
+  <!-- loop back -->
+  <path class="line" d="M320,720 L305,720 L305,330 L348,330" marker-end="url(#a)"/>
+  <text class="s" x="297" y="560" text-anchor="end">くり返す</text>
+
+  <!-- end -->
+  <rect class="end" x="640" y="640" width="200" height="40" rx="20"/>
+  <text class="m" x="740" y="665" text-anchor="middle">return NULL（終了）</text>
+
+  <text class="s" x="20" y="770">compiling / debugging / refactoring の「待つ」は sleep_in_500us_steps。待っている途中でも stop が true になればすぐ戻る。</text>
+</svg>

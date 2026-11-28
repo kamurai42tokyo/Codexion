@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1010 610" width="1010" height="610">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 14px; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .box { fill: #f5f7fa; stroke: #52606d; stroke-width: 1.5; }
+    .hdr { fill: #dde7f5; stroke: #52606d; stroke-width: 1.5; }
+    .cd { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .dg { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.5; }
+    .ghost { fill: #ffffff; stroke: #b7950b; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .sep { stroke: #c3cfd9; stroke-width: 1; }
+    .line { stroke: #52606d; stroke-width: 1.5; fill: none; }
+    .r { stroke: #2f6fdb; stroke-width: 1.8; fill: none; }
+    .l { stroke: #c0392b; stroke-width: 1.8; fill: none; stroke-dasharray: 6 4; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fdb"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>
+  </defs>
+  <rect width="1010" height="610" fill="#ffffff"/>
+
+  <!-- t_table -->
+  <rect class="box" x="30" y="40" width="300" height="242" rx="6"/>
+  <rect class="hdr" x="30" y="40" width="300" height="32" rx="6"/>
+  <text class="t" x="180" y="61" text-anchor="middle">t_table（1個だけ・全員で共有）</text>
+  <g>
+    <text class="m" x="40" y="92">config</text><text class="s" x="150" y="92">設定のコピー（読むだけ）</text>
+    <line class="sep" x1="30" y1="102" x2="330" y2="102"/>
+    <text class="m" x="40" y="122">dongles</text><text class="s" x="150" y="122">ドングル配列の先頭</text>
+    <line class="sep" x1="30" y1="132" x2="330" y2="132"/>
+    <text class="m" x="40" y="152">coders</text><text class="s" x="150" y="152">coder 配列の先頭</text>
+    <line class="sep" x1="30" y1="162" x2="330" y2="162"/>
+    <text class="m" x="40" y="182">start_time</text><text class="s" x="150" y="182">開始時刻（ms）</text>
+    <line class="sep" x1="30" y1="192" x2="330" y2="192"/>
+    <text class="m" x="40" y="212">stop</text><text class="s" x="150" y="212">true で全員が止まる</text>
+    <line class="sep" x1="30" y1="222" x2="330" y2="222"/>
+    <text class="m" x="40" y="242">stop_mutex</text><text class="s" x="150" y="242">stop を守る鍵</text>
+    <line class="sep" x1="30" y1="252" x2="330" y2="252"/>
+    <text class="m" x="40" y="272">log_mutex</text><text class="s" x="150" y="272">ログ出力を守る鍵</text>
+  </g>
+
+  <!-- pointers from t_table -->
+  <path class="line" d="M330,117 C375,117 380,72 418,72" marker-end="url(#a)"/>
+  <path class="line" d="M330,147 C375,147 380,272 418,272" marker-end="url(#a)"/>
+
+  <!-- dongles array -->
+  <text class="s" x="420" y="38">dongles：malloc した N 個の配列（例 N = 4）</text>
+  <rect class="dg" x="420" y="50" width="105" height="44" rx="4"/><text class="m" x="472" y="77" text-anchor="middle">dongles[0]</text>
+  <rect class="dg" x="535" y="50" width="105" height="44" rx="4"/><text class="m" x="587" y="77" text-anchor="middle">dongles[1]</text>
+  <rect class="dg" x="650" y="50" width="105" height="44" rx="4"/><text class="m" x="702" y="77" text-anchor="middle">dongles[2]</text>
+  <rect class="dg" x="765" y="50" width="105" height="44" rx="4"/><text class="m" x="817" y="77" text-anchor="middle">dongles[3]</text>
+  <rect class="ghost" x="880" y="50" width="105" height="44" rx="4"/><text class="m" x="932" y="70" text-anchor="middle">dongles[0]</text><text class="s" x="932" y="87" text-anchor="middle">（同じもの）</text>
+
+  <!-- coders array -->
+  <rect class="cd" x="420" y="250" width="105" height="44" rx="4"/><text class="m" x="472" y="268" text-anchor="middle">coders[0]</text><text class="s" x="472" y="285" text-anchor="middle">id = 1</text>
+  <rect class="cd" x="535" y="250" width="105" height="44" rx="4"/><text class="m" x="587" y="268" text-anchor="middle">coders[1]</text><text class="s" x="587" y="285" text-anchor="middle">id = 2</text>
+  <rect class="cd" x="650" y="250" width="105" height="44" rx="4"/><text class="m" x="702" y="268" text-anchor="middle">coders[2]</text><text class="s" x="702" y="285" text-anchor="middle">id = 3</text>
+  <rect class="cd" x="765" y="250" width="105" height="44" rx="4"/><text class="m" x="817" y="268" text-anchor="middle">coders[3]</text><text class="s" x="817" y="285" text-anchor="middle">id = 4</text>
+  <text class="s" x="420" y="314">coders：malloc した N 個の配列</text>
+
+  <!-- right (solid blue) and left (dashed red) -->
+  <line class="r" x1="440" y1="250" x2="440" y2="96" marker-end="url(#ab)"/>
+  <line class="r" x1="555" y1="250" x2="555" y2="96" marker-end="url(#ab)"/>
+  <line class="r" x1="670" y1="250" x2="670" y2="96" marker-end="url(#ab)"/>
+  <line class="r" x1="785" y1="250" x2="785" y2="96" marker-end="url(#ab)"/>
+  <line class="l" x1="505" y1="250" x2="548" y2="96" marker-end="url(#ar)"/>
+  <line class="l" x1="620" y1="250" x2="663" y2="96" marker-end="url(#ar)"/>
+  <line class="l" x1="735" y1="250" x2="778" y2="96" marker-end="url(#ar)"/>
+  <line class="l" x1="850" y1="250" x2="893" y2="96" marker-end="url(#ar)"/>
+
+  <!-- legend -->
+  <line class="r" x1="880" y1="150" x2="915" y2="150"/><text class="s" x="922" y="154">right</text>
+  <line class="l" x1="880" y1="175" x2="915" y2="175"/><text class="s" x="922" y="179">left</text>
+  <text class="s" x="880" y="204">coders[i].right</text>
+  <text class="s" x="880" y="220">= dongles[i]</text>
+  <text class="s" x="880" y="236">.left = [(i+1)%N]</text>
+
+  <!-- detail: t_coder -->
+  <rect class="box" x="30" y="360" width="320" height="214" rx="6"/>
+  <rect class="cd" x="30" y="360" width="320" height="32" rx="6"/>
+  <text class="t" x="190" y="381" text-anchor="middle">t_coder 1個の中身</text>
+  <text class="m" x="40" y="412">id</text><text class="s" x="195" y="412">番号（1〜N）</text>
+  <text class="m" x="40" y="438">last_compile_start</text><text class="s" x="195" y="438">最後のコンパイル開始時刻</text>
+  <text class="m" x="40" y="464">compile_count</text><text class="s" x="195" y="464">コンパイルした回数</text>
+  <text class="m" x="40" y="490">mutex</text><text class="s" x="195" y="490">上の2つを守る鍵</text>
+  <text class="m" x="40" y="516">table</text><text class="s" x="195" y="516">t_table へのポインタ</text>
+  <text class="m" x="40" y="542">right</text><text class="s" x="195" y="542">右のドングルへのポインタ</text>
+  <text class="m" x="40" y="566">left</text><text class="s" x="195" y="566">左のドングルへのポインタ</text>
+
+  <!-- detail: t_dongle -->
+  <rect class="box" x="370" y="360" width="320" height="162" rx="6"/>
+  <rect class="dg" x="370" y="360" width="320" height="32" rx="6"/>
+  <text class="t" x="530" y="381" text-anchor="middle">t_dongle 1個の中身</text>
+  <text class="m" x="380" y="412">in_use</text><text class="s" x="515" y="412">使用中なら true</text>
+  <text class="m" x="380" y="438">released_at</text><text class="s" x="515" y="438">最後に返した時刻（ms）</text>
+  <text class="m" x="380" y="464">request_queue[2]</text><text class="s" x="515" y="464">順番待ちの列（最大2件）</text>
+  <text class="m" x="380" y="490">request_count</text><text class="s" x="515" y="490">列の件数（0〜2）</text>
+  <text class="m" x="380" y="514">mutex</text><text class="s" x="515" y="514">このドングル全体の鍵</text>
+
+  <!-- detail: t_request -->
+  <path class="line" d="M690,460 L728,460" marker-end="url(#a)"/>
+  <rect class="box" x="730" y="420" width="250" height="86" rx="6"/>
+  <rect class="hdr" x="730" y="420" width="250" height="32" rx="6"/>
+  <text class="t" x="855" y="441" text-anchor="middle">t_request 1件の中身</text>
+  <text class="m" x="740" y="472">id</text><text class="s" x="830" y="472">申し込んだ coder の番号</text>
+  <text class="m" x="740" y="496">deadline</text><text class="s" x="830" y="496">燃え尽き期限（ms）</text>
+
+  <text class="s" x="30" y="598">t_coder の table、right、left はポインタ（場所を指すだけ）なので、同じ t_table や同じ t_dongle を何人もが指せる。</text>
+</svg>

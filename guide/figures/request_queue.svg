@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 15px; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .panel { fill: #f8fafc; stroke: #d9e2ec; stroke-width: 1.5; }
+    .c1 { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .c2 { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.5; }
+    .empty { fill: #ffffff; stroke: #9aa5b1; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .head { fill: none; stroke: #1e8449; stroke-width: 3; }
+    .line { stroke: #52606d; stroke-width: 1.5; fill: none; }
+    .swap { stroke: #c0392b; stroke-width: 1.8; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>
+  </defs>
+  <rect width="960" height="600" fill="#ffffff"/>
+  <text class="s" x="20" y="24">例：d[1] を coder 2（期限 900ms）→ coder 1（期限 800ms）の順に申し込んだとき、d[1] の request_queue はどうなるか</text>
+
+  <!-- FIFO -->
+  <rect class="panel" x="20" y="40" width="450" height="330" rx="8"/>
+  <text class="t" x="40" y="68">fifo：来た順のまま</text>
+  <text class="s" x="40" y="100">① coder 2 が申し込む</text>
+  <text class="s" x="230" y="96">[0]</text><text class="s" x="350" y="96">[1]</text>
+  <rect class="c2" x="200" y="104" width="100" height="40" rx="4"/><text class="m" x="250" y="122" text-anchor="middle">id 2</text><text class="s" x="250" y="138" text-anchor="middle">期限 900</text>
+  <rect class="empty" x="320" y="104" width="100" height="40" rx="4"/>
+  <text class="s" x="40" y="190">② coder 1 が申し込む</text>
+  <rect class="c2" x="200" y="172" width="100" height="40" rx="4"/><text class="m" x="250" y="190" text-anchor="middle">id 2</text><text class="s" x="250" y="206" text-anchor="middle">期限 900</text>
+  <rect class="c1" x="320" y="172" width="100" height="40" rx="4"/><text class="m" x="370" y="190" text-anchor="middle">id 1</text><text class="s" x="370" y="206" text-anchor="middle">期限 800</text>
+  <text class="s" x="40" y="206">末尾に足すだけ</text>
+  <text class="s" x="40" y="270">結果</text>
+  <rect class="c2" x="200" y="250" width="100" height="40" rx="4"/><text class="m" x="250" y="268" text-anchor="middle">id 2</text><text class="s" x="250" y="284" text-anchor="middle">期限 900</text>
+  <rect class="c1" x="320" y="250" width="100" height="40" rx="4"/><text class="m" x="370" y="268" text-anchor="middle">id 1</text><text class="s" x="370" y="284" text-anchor="middle">期限 800</text>
+  <rect class="head" x="196" y="246" width="108" height="48" rx="6"/>
+  <text x="40" y="330">先頭（緑の枠）の coder 2 が次に取れる。</text>
+  <text class="s" x="40" y="352">先に申し込んだ方が先。期限は見ない。</text>
+
+  <!-- EDF -->
+  <rect class="panel" x="490" y="40" width="450" height="330" rx="8"/>
+  <text class="t" x="510" y="68">edf：期限が早い方を先頭へ</text>
+  <text class="s" x="510" y="100">① coder 2 が申し込む</text>
+  <text class="s" x="700" y="96">[0]</text><text class="s" x="820" y="96">[1]</text>
+  <rect class="c2" x="670" y="104" width="100" height="40" rx="4"/><text class="m" x="720" y="122" text-anchor="middle">id 2</text><text class="s" x="720" y="138" text-anchor="middle">期限 900</text>
+  <rect class="empty" x="790" y="104" width="100" height="40" rx="4"/>
+  <text class="s" x="510" y="190">② coder 1 が申し込む</text>
+  <text class="s" x="510" y="206">末尾に足してから</text>
+  <text class="s" x="510" y="222">先頭と比べる</text>
+  <rect class="c2" x="670" y="172" width="100" height="40" rx="4"/><text class="m" x="720" y="190" text-anchor="middle">id 2</text><text class="s" x="720" y="206" text-anchor="middle">期限 900</text>
+  <rect class="c1" x="790" y="172" width="100" height="40" rx="4"/><text class="m" x="840" y="190" text-anchor="middle">id 1</text><text class="s" x="840" y="206" text-anchor="middle">期限 800</text>
+  <path class="swap" d="M840,214 C840,236 720,236 720,216" marker-end="url(#ar)"/>
+  <text class="s" x="780" y="248" text-anchor="middle" fill="#c0392b">800 &lt; 900 なので入れかえ</text>
+  <text class="s" x="510" y="280">結果</text>
+  <rect class="c1" x="670" y="262" width="100" height="40" rx="4"/><text class="m" x="720" y="280" text-anchor="middle">id 1</text><text class="s" x="720" y="296" text-anchor="middle">期限 800</text>
+  <rect class="c2" x="790" y="262" width="100" height="40" rx="4"/><text class="m" x="840" y="280" text-anchor="middle">id 2</text><text class="s" x="840" y="296" text-anchor="middle">期限 900</text>
+  <rect class="head" x="666" y="258" width="108" height="48" rx="6"/>
+  <text x="510" y="330">先頭の coder 1 が次に取れる。</text>
+  <text class="s" x="510" y="352">期限 = last_compile_start + time_to_burnout</text>
+
+  <!-- tie rule -->
+  <rect class="panel" x="20" y="390" width="450" height="190" rx="8"/>
+  <text class="t" x="40" y="418">edf の比べ方（request.c の is_higher）</text>
+  <text x="40" y="450">1. 期限（deadline）が早い方が先</text>
+  <text x="40" y="478">2. 期限が同じなら、id が奇数の方が先</text>
+  <text x="40" y="506">3. それも同じなら、id が小さい方が先</text>
+  <text class="s" x="40" y="540">開始直後は全員の last_compile_start が同じで期限も同じ。</text>
+  <text class="s" x="40" y="558">そのときは 2 により奇数番から先に取れる。</text>
+
+  <!-- remove -->
+  <rect class="panel" x="490" y="390" width="450" height="190" rx="8"/>
+  <text class="t" x="510" y="418">取ったあと：remove_request</text>
+  <rect class="c1" x="510" y="440" width="90" height="36" rx="4"/><text class="m" x="555" y="463" text-anchor="middle">id 1</text>
+  <rect class="c2" x="610" y="440" width="90" height="36" rx="4"/><text class="m" x="655" y="463" text-anchor="middle">id 2</text>
+  <line class="line" x1="710" y1="458" x2="750" y2="458" marker-end="url(#a)"/>
+  <rect class="c2" x="760" y="440" width="90" height="36" rx="4"/><text class="m" x="805" y="463" text-anchor="middle">id 2</text>
+  <rect class="empty" x="855" y="440" width="70" height="36" rx="4"/>
+  <text class="s" x="510" y="506">先頭を消して、2件目を [0] に詰める。request_count は 1 減る。</text>
+  <text class="s" x="510" y="534">1本のドングルを使うのは両隣の2人だけなので、</text>
+  <text class="s" x="510" y="552">列の長さは最大2で足りる（3件目は push_request が無視する）。</text>
+</svg>

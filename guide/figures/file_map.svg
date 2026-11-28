@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 750" width="900" height="750">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 14px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .fn { font-size: 11px; fill: #2f6fdb; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; }
+    .box { fill: #f5f7fa; stroke: #52606d; stroke-width: 1.5; }
+    .acc { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .band { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .line { stroke: #52606d; stroke-width: 1.5; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52606d"/>
+    </marker>
+  </defs>
+  <rect width="900" height="750" fill="#ffffff"/>
+
+  <!-- arrows -->
+  <line class="line" x1="450" y1="86" x2="150" y2="140" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="86" x2="450" y2="140" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="86" x2="750" y2="140" marker-end="url(#a)"/>
+  <line class="line" x1="550" y1="180" x2="660" y2="180" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="196" x2="150" y2="260" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="196" x2="450" y2="260" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="196" x2="750" y2="260" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="316" x2="350" y2="380" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="316" x2="600" y2="380" marker-end="url(#a)"/>
+  <line class="line" x1="350" y1="436" x2="250" y2="500" marker-end="url(#a)"/>
+  <line class="line" x1="350" y1="436" x2="450" y2="500" marker-end="url(#a)"/>
+
+  <!-- function names on arrows -->
+  <text class="fn" x="290" y="108" text-anchor="middle">set_data</text>
+  <text class="fn" x="450" y="118" text-anchor="middle">run_simulations</text>
+  <text class="fn" x="610" y="108" text-anchor="middle">free_all</text>
+  <text class="fn" x="605" y="172" text-anchor="middle">free_table</text>
+  <text class="fn" x="290" y="222" text-anchor="middle">set_table</text>
+  <text class="fn" x="450" y="236" text-anchor="middle">run_simulation</text>
+  <text class="fn" x="615" y="222" text-anchor="middle">monitor_routine</text>
+  <text class="fn" x="365" y="352" text-anchor="end">take_dongles / release_dongles</text>
+  <text class="fn" x="540" y="352" text-anchor="start">compiling など</text>
+  <text class="fn" x="290" y="472" text-anchor="end">push_request など</text>
+  <text class="fn" x="410" y="472" text-anchor="start">is_my_turn</text>
+
+  <!-- boxes -->
+  <rect class="acc" x="370" y="30" width="160" height="56" rx="8"/>
+  <text class="t" x="450" y="53" text-anchor="middle">main.c</text>
+  <text class="s" x="450" y="73" text-anchor="middle">入口（引数の数を確認）</text>
+
+  <rect class="box" x="640" y="30" width="220" height="56" rx="8" stroke-dasharray="4 3"/>
+  <text class="t" x="750" y="53" text-anchor="middle">codexion.h</text>
+  <text class="s" x="750" y="73" text-anchor="middle">構造体と関数の宣言（全員が読む）</text>
+
+  <rect class="box" x="60" y="140" width="180" height="56" rx="8"/>
+  <text class="t" x="150" y="163" text-anchor="middle">parse.c</text>
+  <text class="s" x="150" y="183" text-anchor="middle">引数 → t_config</text>
+
+  <rect class="acc" x="350" y="140" width="200" height="56" rx="8"/>
+  <text class="t" x="450" y="163" text-anchor="middle">simulation.c</text>
+  <text class="s" x="450" y="183" text-anchor="middle">準備・スレッド起動・後片付け</text>
+
+  <rect class="box" x="660" y="140" width="180" height="56" rx="8"/>
+  <text class="t" x="750" y="163" text-anchor="middle">free.c</text>
+  <text class="s" x="750" y="183" text-anchor="middle">mutex の破棄と free</text>
+
+  <rect class="box" x="60" y="260" width="180" height="56" rx="8"/>
+  <text class="t" x="150" y="283" text-anchor="middle">init.c</text>
+  <text class="s" x="150" y="303" text-anchor="middle">t_table を組み立てる</text>
+
+  <rect class="acc" x="350" y="260" width="200" height="56" rx="8"/>
+  <text class="t" x="450" y="283" text-anchor="middle">threads/coder.c</text>
+  <text class="s" x="450" y="303" text-anchor="middle">coder スレッドの本体</text>
+
+  <rect class="acc" x="640" y="260" width="220" height="56" rx="8"/>
+  <text class="t" x="750" y="283" text-anchor="middle">threads/monitor.c</text>
+  <text class="s" x="750" y="303" text-anchor="middle">見張りスレッドの本体</text>
+
+  <rect class="box" x="250" y="380" width="200" height="56" rx="8"/>
+  <text class="t" x="350" y="403" text-anchor="middle">threads/dongle.c</text>
+  <text class="s" x="350" y="423" text-anchor="middle">ドングル2本を取る・返す</text>
+
+  <rect class="box" x="500" y="380" width="200" height="56" rx="8"/>
+  <text class="t" x="600" y="403" text-anchor="middle">threads/actions.c</text>
+  <text class="s" x="600" y="423" text-anchor="middle">compile / debug / refactor</text>
+
+  <rect class="box" x="150" y="500" width="200" height="56" rx="8"/>
+  <text class="t" x="250" y="523" text-anchor="middle">threads/request.c</text>
+  <text class="s" x="250" y="543" text-anchor="middle">待ち行列に並べる・消す</text>
+
+  <rect class="box" x="360" y="500" width="200" height="56" rx="8"/>
+  <text class="t" x="460" y="523" text-anchor="middle">threads/turn.c</text>
+  <text class="s" x="460" y="543" text-anchor="middle">自分の番かどうか判定</text>
+
+  <!-- shared utilities -->
+  <rect class="band" x="40" y="596" width="820" height="108" rx="10"/>
+  <text class="t" x="60" y="620">共通部品（どのファイルからも呼ばれる）</text>
+  <rect class="box" x="90" y="636" width="200" height="52" rx="8"/>
+  <text class="t" x="190" y="657" text-anchor="middle">threads/stop.c</text>
+  <text class="s" x="190" y="676" text-anchor="middle">停止フラグを読む・立てる</text>
+  <rect class="box" x="350" y="636" width="200" height="52" rx="8"/>
+  <text class="t" x="450" y="657" text-anchor="middle">threads/print_log.c</text>
+  <text class="s" x="450" y="676" text-anchor="middle">ログを1行出す</text>
+  <rect class="box" x="610" y="636" width="200" height="52" rx="8"/>
+  <text class="t" x="710" y="657" text-anchor="middle">threads/time.c</text>
+  <text class="s" x="710" y="676" text-anchor="middle">現在時刻・小刻みに待つ</text>
+
+  <text class="s" x="40" y="734">矢印 A → B ：A の中から B の関数を呼ぶ（青字は呼ぶ関数名）。青い箱はスレッドの流れの中心。</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470">
+  <style>
+    text { font-family: "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 13px; fill: #1f2933; }
+    .t { font-weight: bold; font-size: 14px; }
+    .m { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    .s { font-size: 12px; fill: #52606d; }
+    .dg { fill: #fdf6e3; stroke: #b7950b; stroke-width: 1.5; }
+    .lg { fill: #eafaf1; stroke: #1e8449; stroke-width: 1.5; }
+    .st { fill: #fff1f0; stroke: #c0392b; stroke-width: 1.5; }
+    .cd { fill: #e6f0ff; stroke: #2f6fdb; stroke-width: 1.5; }
+    .hdr { fill: #dde7f5; stroke: #9aa5b1; stroke-width: 1; }
+    .row { fill: #ffffff; stroke: #d9e2ec; stroke-width: 1; }
+    .line { stroke: #52606d; stroke-width: 2; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#52606d"/></marker>
+  </defs>
+  <rect width="960" height="470" fill="#ffffff"/>
+
+  <text class="t" x="20" y="28">鍵（mutex）を同時に持つときの順番：いつも左から右へ。逆向きにかける場所はない</text>
+  <rect class="dg" x="20" y="48" width="190" height="56" rx="8"/><text x="115" y="72" text-anchor="middle">dongle の mutex</text><text class="s" x="115" y="92" text-anchor="middle">アドレスが小さい方</text>
+  <rect class="dg" x="260" y="48" width="190" height="56" rx="8"/><text x="355" y="72" text-anchor="middle">dongle の mutex</text><text class="s" x="355" y="92" text-anchor="middle">アドレスが大きい方</text>
+  <rect class="lg" x="500" y="48" width="190" height="56" rx="8"/><text class="m" x="595" y="72" text-anchor="middle">log_mutex</text><text class="s" x="595" y="92" text-anchor="middle">print_log が持つ</text>
+  <rect class="st" x="740" y="48" width="190" height="56" rx="8"/><text class="m" x="835" y="72" text-anchor="middle">stop_mutex</text><text class="s" x="835" y="92" text-anchor="middle">is_stopped などが持つ</text>
+  <line class="line" x1="210" y1="76" x2="258" y2="76" marker-end="url(#a)"/>
+  <line class="line" x1="450" y1="76" x2="498" y2="76" marker-end="url(#a)"/>
+  <line class="line" x1="690" y1="76" x2="738" y2="76" marker-end="url(#a)"/>
+  <text class="s" x="20" y="128">例：take_dongles は dongle の鍵を2つ持ったまま print_log を呼ぶ → print_log の中で log_mutex → その中の is_stopped で stop_mutex。</text>
+
+  <rect class="cd" x="20" y="144" width="910" height="40" rx="8"/>
+  <text class="m" x="36" y="169">coder->mutex</text>
+  <text x="150" y="169">は、ほかの鍵と同時には持たない（かけたら、すぐ外す）。だからどの順番とも衝突しない。</text>
+
+  <!-- table -->
+  <rect class="hdr" x="20" y="204" width="910" height="32"/>
+  <text class="t" x="30" y="225">mutex</text><text class="t" x="200" y="225">守っているもの</text><text class="t" x="560" y="225">鍵をかける関数</text>
+
+  <rect class="row" x="20" y="236" width="910" height="48"/>
+  <text class="m" x="30" y="258">dongle-&gt;mutex</text><text class="s" x="30" y="275">ドングル1本に1つ</text>
+  <text x="200" y="258">in_use, released_at,</text><text x="200" y="275">request_queue, request_count</text>
+  <text class="m" x="560" y="258">take_dongles, release_dongles,</text><text class="m" x="560" y="275">run_simulation_when_one_coder</text>
+
+  <rect class="row" x="20" y="284" width="910" height="48"/>
+  <text class="m" x="30" y="306">coder-&gt;mutex</text><text class="s" x="30" y="323">coder 1人に1つ</text>
+  <text x="200" y="306">last_compile_start, compile_count</text><text class="s" x="200" y="323">（本人が書き、monitor が読む）</text>
+  <text class="m" x="560" y="306">compiling,</text><text class="m" x="560" y="323">is_burned_out, is_all_compiled</text>
+
+  <rect class="row" x="20" y="332" width="910" height="48"/>
+  <text class="m" x="30" y="354">log_mutex</text><text class="s" x="30" y="371">全体で1つ</text>
+  <text x="200" y="354">標準出力（1行が混ざらないように）</text><text class="s" x="200" y="371">と「stop を見てから出す」までの間</text>
+  <text class="m" x="560" y="354">print_log</text>
+
+  <rect class="row" x="20" y="380" width="910" height="48"/>
+  <text class="m" x="30" y="402">stop_mutex</text><text class="s" x="30" y="419">全体で1つ</text>
+  <text x="200" y="402">stop</text>
+  <text class="m" x="560" y="402">is_stopped, stop_simulation,</text><text class="m" x="560" y="419">create_threads（失敗したとき）</text>
+
+  <text class="s" x="20" y="454">t_config（設定）は main が最初に書いたあとは読むだけなので、鍵はいらない。</text>
+</svg>
